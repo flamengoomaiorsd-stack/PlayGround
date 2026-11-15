@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#071322">
+  <title>Aranha da Cidade — Noite de Aço</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23071322'/%3E%3Cpath d='M16 3 19 12 28 16 19 20 16 29 13 20 4 16 13 12Z' fill='%23e4434b'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <canvas id="scene" aria-label="Cidade pixel art e jogo"></canvas>
+    <div class="scanlines" aria-hidden="true"></div>
+    <header class="topbar"><div class="brand"><span class="brand-mark">✦</span><span>ARANHA <b>DA CIDADE</b></span></div><div class="top-meta"><span class="pulse"></span> NOVA YORK · <span id="clock">23:41</span><span class="edition">EDIÇÃO PIXEL</span></div></header>
+    <section id="titleScreen" class="screen title-screen">
+      <div class="title-copy"><p class="eyebrow">UMA AVENTURA ORIGINAL EM PIXEL ART</p><h1>NOITE<br><em>DE AÇO</em></h1><p class="intro-copy">A cidade não dorme. Hoje, ela precisa de você.</p>
+        <div class="title-actions"><button class="primary" id="newGame">INICIAR HISTÓRIA <span>↗</span></button><button class="secondary" id="continueGame">CONTINUAR <span>→</span></button></div>
+        <p class="tiny-note">JOGO ORIGINAL · SALVAMENTO AUTOMÁTICO</p>
+      </div>
+      <div class="hero-caption"><span>01</span><div><b>O VIGIA DA CIDADE</b><small>Protetor de telhado em telhado</small></div></div>
+      <button class="menu-toggle" id="openMenu">☰ <span>EXTRAS</span></button>
+      <div class="version">CAPÍTULO <span id="titleChapter">01</span> / 09</div>
+    </section>
+    <section id="gameScreen" class="screen game-screen hidden">
+      <div class="hud-top"><div class="hud-card health-card"><span class="hud-label">VITALIDADE</span><div class="meter"><i id="healthFill"></i></div><span id="healthText">100</span></div><div class="mission-card"><span class="hud-label">OBJETIVO ATUAL</span><strong id="objective">Investigue a área</strong><small id="missionName">CAPÍTULO 01 · A CAÇADA</small></div><div class="hud-card xp-card"><span class="hud-label">NÍVEL <b id="levelText">01</b></span><div class="meter xp-meter"><i id="xpFill"></i></div><span id="xpText">0 XP</span></div></div>
+      <div class="hud-bottom"><div class="district-tag"><span class="map-dot"></span><span id="districtName">HELL'S KITCHEN</span></div><div class="combo" id="combo">✦ <span>0</span> SEQUÊNCIA</div><div class="web-status"><span>TEIA</span><i id="webFill"></i></div></div>
+      <button id="pauseButton" class="pause-button" aria-label="Pausar">Ⅱ</button>
+      <div id="toast" class="toast"></div>
+      <div id="dialogue" class="dialogue hidden"><div class="speaker" id="speaker">PETER</div><p id="dialogueText"></p><button id="dialogueNext">CONTINUAR <span>↵</span></button></div>
+      <div id="touchControls" class="touch-controls"><div class="dpad"><button data-action="left">◀</button><button data-action="right">▶</button></div><div class="action-pad"><button data-action="web" class="web-btn">TEIA</button><button data-action="jump">↑</button><button data-action="attack">✦</button><button data-action="dodge">↗</button></div></div>
+    </section>
+    <section id="menuScreen" class="screen overlay-screen hidden"><div class="panel"><button class="close-button" id="closeMenu">×</button><p class="eyebrow">ARQUIVO DO VIGIA</p><h2 id="panelTitle">EXTRAS</h2><nav id="menuTabs" class="menu-tabs"></nav><div id="panelContent" class="panel-content"></div></div></section>
+    <section id="pauseScreen" class="screen overlay-screen hidden"><div class="panel pause-panel"><p class="eyebrow">PAUSA · HELL'S KITCHEN</p><h2>RESPIRA.</h2><p class="muted">A cidade espera por você.</p><div class="pause-grid"><button data-pause="resume">CONTINUAR <span>↵</span></button><button data-pause="restart">REINICIAR MISSÃO <span>⟲</span></button><button data-pause="map">MAPA DA CIDADE <span>⌖</span></button><button data-pause="suits">TRAJES <span>◈</span></button><button data-pause="save">SALVAR AGORA <span>↓</span></button><button data-pause="home">MENU PRINCIPAL <span>⌂</span></button></div><p class="controls-hint">MOVER WASD / SETAS　·　PULAR ESPAÇO　·　ATACAR J　·　TEIA K　·　ESQUIVA L　·　PAUSAR ESC</p></div></section>
+    <section id="cutscene" class="screen cutscene hidden"><div class="cutscene-top"><span>NOITE DE AÇO</span><button id="skipScene">PULAR CENA　››</button></div><div class="cutscene-text"><p class="eyebrow" id="sceneChapter">PRÓLOGO</p><h2 id="sceneTitle">A cidade chama.</h2><p id="sceneLine">Uma noite comum nunca dura muito.</p><button id="sceneNext" class="primary">CONTINUAR <span>↗</span></button></div><div class="scene-progress"><i id="sceneProgress"></i></div></section>
+    <section id="endScreen" class="screen overlay-screen hidden"><div class="panel ending-panel"><p class="eyebrow">MISSÃO CONCLUÍDA</p><h2 id="endTitle">BOA, VIGIA.</h2><p id="endMessage" class="muted"></p><div class="reward-line" id="rewardLine">+ 250 XP　·　+ 1 FICHA</div><button id="nextMission" class="primary">PRÓXIMO CAPÍTULO <span>↗</span></button><button id="backToCity" class="secondary">CONTINUAR NA CIDADE <span>→</span></button></div></section>
+    <footer><span>PIXEL ART ORIGINAL · UMA HISTÓRIA SOBRE A CIDADE</span><span>FEITO PARA TECLADO E TOQUE</span></footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
