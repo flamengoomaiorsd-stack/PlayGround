@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#090d17" />
+  <title>Spider-Man: New York — After Dark</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+    <canvas id="scene" aria-label="Mundo pixel art de Nova York"></canvas>
+    <div class="grain"></div>
+    <div id="title-mark" class="title-mark"><span>MARVEL</span><strong>SPIDER-MAN</strong><i>NEW YORK — AFTER DARK</i></div>
+
+    <section id="main-menu" class="screen main-menu">
+      <div class="menu-top"><span class="edition">PIXEL EDITION <b>01</b></span><span class="menu-date">NOVA YORK · 02:17 AM</span></div>
+      <div class="menu-copy"><p class="eyebrow">A CIDADE NUNCA DORME</p><h1>Uma noite.<br><em>Uma cidade.</em></h1><p class="subcopy">O perigo está à espreita em cada telhado.</p></div>
+      <nav id="main-nav" class="main-nav" aria-label="Menu principal">
+        <button data-action="continue"><span class="num">01</span><span>Continuar</span><small id="continue-label">NOVO JOGO</small></button>
+        <button data-action="new"><span class="num">02</span><span>Novo jogo</span><small>INÍCIO DA HISTÓRIA</small></button>
+        <button data-action="chapters"><span class="num">03</span><span>Capítulos</span><small>CAMPANHA</small></button>
+        <button data-action="explore"><span class="num">04</span><span>Exploração livre</span><small>MANHATTAN</small></button>
+        <button data-action="suits"><span class="num">05</span><span>Trajes & habilidades</span><small>PERSONALIZAR</small></button>
+        <button data-action="extras"><span class="num">06</span><span>Extras</span><small>REGISTROS · AJUSTES</small></button>
+      </nav>
+      <div class="menu-bottom"><span>© 2026 · UMA AVENTURA PIXEL ORIGINAL</span><span class="press">↵ <b>SELECIONAR</b> <kbd>↑ ↓</kbd> NAVEGAR</span></div>
+    </section>
+
+    <section id="sub-panel" class="screen sub-panel hidden">
+      <button id="back-btn" class="back-btn">← <span>VOLTAR</span></button>
+      <div id="panel-content"></div>
+    </section>
+
+    <section id="intro" class="screen cinematic hidden">
+      <div class="cinematic-label"><span>CAPÍTULO 01</span><span>O ÚLTIMO DIA DE FISK</span></div>
+      <div id="cinematic-content" class="cinematic-content"></div>
+      <div class="cinematic-footer"><span id="cinematic-hint">ESPAÇO · CONTINUAR</span><button id="skip-scene">PULAR CENA ↗</button></div>
+    </section>
+
+    <section id="hud" class="hud hidden">
+      <div class="hud-top">
+        <div class="mission-label"><span class="mission-icon">✳</span><div><small id="chapter-name">CAPÍTULO 01 · O ÚLTIMO DIA DE FISK</small><strong id="objective">Chegue ao complexo de Fisk</strong></div></div>
+        <div class="district-tag"><i></i> HELL'S KITCHEN</div>
+      </div>
+      <div class="hud-bottom">
+        <div class="status-bars"><div class="health-row"><span>VITALIDADE</span><div class="bar"><i id="health-fill"></i></div><b id="health-text">100</b></div><div class="focus-row"><span>FOCO</span><div class="bar"><i id="focus-fill"></i></div><b id="focus-text">0%</b></div><div class="level-line"><span>NV. <b id="level">01</b></span><div class="xp-track"><i id="xp-fill"></i></div><span id="xp-text">0 / 100 XP</span></div></div>
+        <div class="combat-tip" id="combat-tip"><kbd>J</kbd> teia <kbd>K</kbd> ataque <kbd>L</kbd> esquiva</div>
+        <div class="mini-map"><span class="map-label">HELL'S KITCHEN</span><div class="map-grid"><i class="map-player"></i><i class="map-target"></i><b>✳</b></div></div>
+      </div>
+      <div id="toast" class="toast"></div>
+      <div id="interact-prompt" class="interact-prompt hidden"><kbd>E</kbd> <span>INTERAGIR</span></div>
+      <div class="mobile-controls"><div class="dpad"><button data-key="a">◀</button><button data-key="w">▲</button><button data-key="d">▶</button></div><div class="actions"><button data-key="j">TEIA</button><button data-key="k">ATQ</button><button data-key="l">ESQ</button><button data-key=" ">PULO</button></div></div>
+    </section>
+
+    <section id="pause" class="overlay-screen hidden"><div class="pause-card"><p class="eyebrow">NOVA YORK · PAUSADO</p><h2>Respire,<br><em>Peter.</em></h2><div class="pause-actions"><button data-pause="resume">Continuar <kbd>ESC</kbd></button><button data-pause="map">Mapa da cidade</button><button data-pause="suits">Trajes & habilidades</button><button data-pause="save">Salvar progresso</button><button data-pause="quit">Sair para o menu</button></div><p class="save-note">PROGRESSO SALVO AUTOMATICAMENTE</p></div></section>
+
+    <section id="dialogue" class="dialogue hidden"><div class="speaker-icon" id="speaker-icon">SP</div><div class="dialogue-box"><div class="speaker-name" id="speaker-name">PETER PARKER</div><p id="dialogue-text"></p><button id="dialogue-next">CONTINUAR <kbd>↵</kbd></button></div></section>
+    <div id="chapter-card" class="chapter-card hidden"><span>MARVEL'S</span><small id="chapter-card-num">CAPÍTULO 01</small><h2 id="chapter-card-name">O ÚLTIMO DIA<br>DE FISK</h2><i></i><p>HELL'S KITCHEN · 02:17 AM</p></div>
+    <div id="loading" class="loading hidden"><div class="loading-mark">SP<span>IDER</span></div><div class="load-caption">CARREGANDO NOVA YORK <i></i></div><div class="load-line"><i></i></div></div>
+    <footer class="legal">UMA AVENTURA PIXEL ORIGINAL · FAN-MADE, SEM AFILIAÇÃO COM A MARVEL</footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
