@@ -63,6 +63,8 @@ const lights = [];
 const signs = [];
 const specials = [];
 const parkingLots = [];
+const pois = [];
+const glows = [];
 const landmarks = {
   club: { x: 19.5 * T, y: 42.6 * T },
   brief: { x: 108 * T, y: 50.6 * T },
@@ -136,6 +138,40 @@ function addHydrant(tx, ty) { props.push({ type: 'hydrant', x: tx * T + 8, y: ty
 function addUmbrella(tx, ty, color) { props.push({ type: 'umbrella', x: tx * T + 8, y: ty * T + 12, color }); }
 function addBoat(x, y, color) { props.push({ type: 'boat', x, y, color, seed: Math.random() * 10 }); }
 function addCrate(x, y) { props.push({ type: 'crate', x, y }); }
+function addBush(tx, ty, color) { props.push({ type: 'bush', x: tx * T + 8 + rand(3, -3), y: ty * T + 11, color: color || '#2f7d4f', seed: Math.random() * 100 }); }
+function addFlowers(tx, ty, color) { props.push({ type: 'flowers', x: tx * T + 8 + rand(4, -4), y: ty * T + 11, color: color || pick(['#ff2d95', '#ffd166', '#ff8a2b', '#b98cff', '#f3f0e6']) }); }
+function addTrash(tx, ty) { props.push({ type: 'trash', x: tx * T + 8, y: ty * T + 11 }); }
+function addStreetSign(tx, ty, color) { props.push({ type: 'streetSign', x: tx * T + 8, y: ty * T + 11, color: color || '#24e0ff' }); }
+function addMailbox(tx, ty) { props.push({ type: 'mailbox', x: tx * T + 8, y: ty * T + 11 }); }
+function addPlanter(tx, ty) { props.push({ type: 'planter', x: tx * T + 8, y: ty * T + 11, seed: Math.random() * 100 }); }
+function addScooter(tx, ty) { props.push({ type: 'scooter', x: tx * T + 8, y: ty * T + 11, color: pick(['#ff2d95', '#24e0ff', '#ffd166', '#4ade80']) }); }
+function addCone(tx, ty) { props.push({ type: 'cone', x: tx * T + 8 + rand(4, -4), y: ty * T + 11 }); }
+function addBarrier(tx, ty) { props.push({ type: 'barrier', x: tx * T + 8, y: ty * T + 11 }); }
+function addStall(tx, ty, color) { props.push({ type: 'stall', x: tx * T + 8, y: ty * T + 12, color: color || pick(['#ff2d95', '#24e0ff', '#ffd166', '#4ade80']), seed: Math.random() * 10 }); }
+function addGazebo(tx, ty) { props.push({ type: 'gazebo', x: tx * T + 8, y: ty * T + 13 }); }
+function addTiki(tx, ty) { props.push({ type: 'tiki', x: tx * T + 8, y: ty * T + 12, seed: Math.random() * 10 }); }
+function addLifeguard(tx, ty) { props.push({ type: 'lifeguard', x: tx * T + 8, y: ty * T + 12 }); }
+function addTowels(tx, ty, color) { props.push({ type: 'towel', x: tx * T + 8 + rand(3, -3), y: ty * T + 12, color: color || pick(['#ff2d95', '#24e0ff', '#ffd166', '#f3f0e6']) }); }
+function addScooterRow(tx, ty, n) { for (let i = 0; i < n; i++) addScooter(tx + i * .6, ty); }
+function addPOI(name, tx, ty, color = '#ffd166') {
+  const poi = { name, x: tx * T, y: ty * T, color };
+  pois.push(poi);
+  return poi;
+}
+function addGlow(x, y, r, color, a = .35) { glows.push({ x, y, r, color, a }); }
+function addProp(type, x, y, opts = {}) { props.push(Object.assign({ type, x, y }, opts)); }
+function addGateSign(tx, ty, text, color) { props.push({ type: 'gateSign', x: tx * T + 8, y: ty * T + 13, text, color: color || '#ffd166' }); }
+function furnishStreet(tx, ty) {
+  if (!inBounds(tx, ty) || tileAt(tx, ty) !== TILE.SIDEWALK) return;
+  const h = hash2(tx * 3 + 1, ty * 5 + 2);
+  if (h > .88) addBench(tx, ty);
+  else if (h > .76) addTrash(tx, ty);
+  else if (h > .64) addStreetSign(tx, ty, h > .78 ? '#ffd166' : '#24e0ff');
+  else if (h > .53) addHydrant(tx, ty);
+  else if (h > .43) addPlanter(tx, ty);
+  else if (h > .34) addBush(tx, ty);
+  else if (h > .27) addFlowers(tx, ty, '#f3f0e6');
+}
 
 function buildBlock(x1, y1, x2, y2, bx, by) {
   const ix1 = x1 + 1, ix2 = x2 - 1, iy1 = y1 + 1, iy2 = y2 - 1;
@@ -152,9 +188,13 @@ function buildBlock(x1, y1, x2, y2, bx, by) {
     fillTiles(mx, iy1, mx, iy2, TILE.PLAZA);
     fillTiles(ix1, my, ix2, my, TILE.PLAZA);
     specials.push({ type: 'fountain', x: (mx + 0.5) * T, y: (my + 0.5) * T, r: 13 });
+    specials.push({ type: 'medallion', x: (mx + 0.5) * T, y: (my + 0.5) * T, r: 26 });
     addPalm(ix1 + 1, iy1 + 1, 1.05); addPalm(ix2 - 1, iy1 + 1, .95);
     addPalm(ix1 + 1, iy2 - 1, 1.1); addPalm(ix2 - 1, iy2 - 1, .9);
     addBench(mx - 2, my + 1); addBench(mx + 2, my - 1);
+    addBush(ix1 + 2, iy2 - 1, '#357a4a'); addBush(ix2 - 2, iy1 + 1, '#3d8653');
+    addFlowers(mx - 3, my - 2, '#ff2d95'); addFlowers(mx + 3, my + 2, '#ffd166');
+    addTrash(mx - 3, my + 2); addStreetSign(mx + 3, my - 2, '#24e0ff');
     return;
   }
   if (kind === 'parking') {
@@ -162,12 +202,18 @@ function buildBlock(x1, y1, x2, y2, bx, by) {
     parkingLots.push({ x1: ix1, y1: iy1, x2: ix2, y2: iy2, dir: (bx + by) % 2 });
     specials.push({ type: 'parking', x1: ix1, y1: iy1, x2: ix2, y2: iy2 });
     if (roll > 0.55) addPalm(ix1, iy2, .9);
+    addCone(ix2 - 1, iy2 - 1); addCone(ix1 + 1, iy1 + 1);
+    if (roll > 0.4) addTrash(ix2, iy2);
+    if (roll > 0.6) addScooterRow(ix1 + 2, iy2 - 1, 3);
     return;
   }
   if (kind === 'plaza') {
     fillTiles(ix1, iy1, ix2, iy2, TILE.PLAZA);
     addPalm(ix1 + 1, iy1 + 1, 1); addPalm(ix2 - 1, iy2 - 1, 1.05);
     addBench(ix1 + 2, iy2 - 1);
+    addPlanter(ix1 + 1, iy2 - 1); addPlanter(ix2 - 1, iy1 + 1);
+    addTrash(ix2 - 2, iy2 - 1); addFlowers(ix1 + 3, iy1 + 1, '#ff8a2b');
+    specials.push({ type: 'medallion', x: ((ix1 + ix2) / 2 + .5) * T, y: ((iy1 + iy2) / 2 + .5) * T, r: 22 });
     return;
   }
 
@@ -176,7 +222,7 @@ function buildBlock(x1, y1, x2, y2, bx, by) {
   const total = iy2 - iy1 + 1;
   const strip = Math.floor((total - (count - 1)) / count);
   let yy = iy1;
-  const names = ['HOTEL', 'BAR', 'CLUB', 'TATTOO', 'VINIL', 'SURF', 'LIQUOR', 'CAFÉ', 'PAWN', 'MOTEL'];
+  const names = ['HOTEL', 'BAR', 'CLUB', 'TATTOO', 'VINIL', 'SURF', 'LIQUOR', 'CAFÉ', 'PAWN', 'MOTEL', 'SUSHI', 'BODEGA', 'TACOS', 'ARCADE'];
   for (let i = 0; i < count; i++) {
     const h = i === count - 1 ? (iy2 - yy + 1) : strip;
     if (h >= 3) {
@@ -196,6 +242,13 @@ function buildBlock(x1, y1, x2, y2, bx, by) {
   if (roll > 0.68) addLamp(x2, y2);
   if (roll > 0.6) addHydrant(ix1, iy2);
   if (roll > 0.72) addPalm(ix2, iy1, .95);
+  if (roll > 0.32) addTrash(ix2, iy2);
+  if (roll > 0.44) addStreetSign(ix1, iy1, roll > .7 ? '#ffd166' : '#24e0ff');
+  if (roll > 0.5) addPlanter(ix2, iy2 - 1);
+  if (roll > 0.58) addBush(ix1 + 1, iy2, '#2f7d4f');
+  if (roll > 0.66) addMailbox(ix1, iy1 + 1);
+  if (roll > 0.74) addScooterRow(ix2 - 2, iy2 - 1, 2);
+  if (roll > 0.82) addFlowers(ix1 + 2, iy2 - 1, '#b98cff');
 }
 
 function buildClub(x1, y1, x2, y2) {
@@ -207,6 +260,7 @@ function buildClub(x1, y1, x2, y2) {
   addLamp(13, 44); addLamp(25, 44);
   props.push({ type: 'neonPillar', x: 15 * T, y: 42 * T, color: '#ff2d95' });
   props.push({ type: 'neonPillar', x: 24 * T, y: 42 * T, color: '#24e0ff' });
+  addPOI('NEON PALACE', 19.5, 40.5, '#ff2d95');
 }
 
 function buildMotel(x1, y1, x2, y2) {
@@ -218,6 +272,7 @@ function buildMotel(x1, y1, x2, y2) {
   specials.push({ type: 'parking', x1: x1 + 1, y1: y1 + 1, x2: x2 - 1, y2: y2 - 1 });
   addPalm(12, 63, 1.1); addPalm(26, 63, 1.1);
   addLamp(12, 56); addLamp(26, 56);
+  addPOI('MOTEL VICE', 19, 57, '#24e0ff');
 }
 
 function buildGarage(x1, y1, x2, y2) {
@@ -228,6 +283,7 @@ function buildGarage(x1, y1, x2, y2) {
   addCrate(54 * T, 21 * T); addCrate(56 * T, 21 * T); addCrate(66 * T, 22 * T);
   addLamp(52, 24); addLamp(66, 12);
   addPalm(51, 10, .95);
+  addPOI('GARAGEM', 59.5, 19, '#ffd166');
 }
 
 function buildHelipad(x1, y1, x2, y2) {
@@ -235,6 +291,7 @@ function buildHelipad(x1, y1, x2, y2) {
   specials.push({ type: 'helipad', x: 79 * T, y: 57 * T, r: 46 });
   addPalm(72, 50, 1.05); addPalm(86, 50, 1.05); addPalm(72, 64, 1); addPalm(86, 64, 1);
   addLamp(73, 56); addLamp(85, 56);
+  addPOI('HELIPONTO', 79, 57, '#ffd166');
 }
 
 function buildMarina(x1, y1, x2, y2) {
@@ -246,6 +303,7 @@ function buildMarina(x1, y1, x2, y2) {
   addCrate(101 * T, 78 * T); addCrate(102 * T, 78 * T);
   addLamp(101, 75); addLamp(108, 75);
   addPalm(91, 84, 1); addPalm(99, 84, 1);
+  addPOI('MARINA', 104, 77, '#24e0ff');
 }
 
 function buildBeachPier() {
@@ -255,9 +313,256 @@ function buildBeachPier() {
   addCrate(104 * T, 51 * T); addCrate(112 * T, 51 * T);
   addLamp(101, 48); addLamp(109, 48);
   addUmbrella(106, 56, '#ff2d95'); addUmbrella(109, 59, '#24e0ff'); addUmbrella(105, 62, '#ffd166');
+  addPOI('PÍER DE VICE', 108, 50, '#ff2d95');
+}
+
+/* ---------------- new districts & landmarks ---------------- */
+
+function buildHotel(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PLAZA);
+  addBuilding(13, 11, 13, 7, 2, { name: 'VICE BEACH HOTEL', neon: '#ff8a2b' });
+  fillTiles(15, 20, 19, 22, TILE.WATER, true);
+  specials.push({ type: 'pool', x1: 15, y1: 20, x2: 20, y2: 23 });
+  addUmbrella(14, 24, '#ff2d95'); addUmbrella(21, 24, '#24e0ff'); addUmbrella(17, 24, '#ffd166');
+  addPalm(12, 19, 1.05); addPalm(25, 19, 1.05); addPalm(12, 25, .95); addPalm(25, 25, .95);
+  addLamp(13, 25); addLamp(24, 25);
+  addBench(22, 20); addTrash(22, 21);
+  specials.push({ type: 'medallion', x: 19.5 * T, y: 16 * T, r: 20 });
+  addPOI('HOTEL VICE BEACH', 19.5, 15, '#ff8a2b');
+}
+
+function buildHospital(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.SIDEWALK);
+  addBuilding(93, 12, 6, 9, 5, { name: 'HOSPITAL', neon: '#ff3b3b' });
+  specials.push({ type: 'cross', x: 96 * T, y: 24 * T, r: 14, color: 'rgba(255,59,91,.75)' });
+  parkingLots.push({ x1: 92, y1: 22, x2: 98, y2: 25, dir: 1 });
+  specials.push({ type: 'parking', x1: 92, y1: 22, x2: 98, y2: 25 });
+  addLamp(92, 21); addLamp(98, 21);
+  addTrash(98, 22); addBench(92, 23);
+  addPOI('HOSPITAL CENTRAL', 96, 18, '#ff3b3b');
+}
+
+function buildPolice(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PARKING);
+  addBuilding(74, 11, 11, 6, 5, { name: 'POLICE HQ', neon: '#24a9ff' });
+  parkingLots.push({ x1: 72, y1: 18, x2: 86, y2: 24, dir: 0, police: true });
+  specials.push({ type: 'parking', x1: 72, y1: 18, x2: 86, y2: 24 });
+  addBarrier(73, 19); addBarrier(76, 19); addCone(84, 23);
+  addLamp(72, 17); addLamp(86, 17);
+  addGlow(79.5 * T, 15 * T, 70, '36,169,255', .3);
+  addPOI('DELEGACIA DE VICE', 79, 17, '#24a9ff');
+}
+
+function buildStadium(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PLAZA);
+  specials.push({ type: 'track', x: 39.5 * T, y: 17.5 * T, rx: 112, ry: 104 });
+  addStall(33, 24, '#ff2d95'); addStall(46, 24, '#24e0ff');
+  addProp('floodlight', 32 * T, 10 * T); addProp('floodlight', 47 * T, 10 * T);
+  addProp('floodlight', 32 * T, 25 * T); addProp('floodlight', 47 * T, 25 * T);
+  addBarrier(33, 25); addBarrier(46, 25);
+  addPalm(32, 11, 1); addPalm(47, 11, 1);
+  addPOI('VICE STADIUM', 39.5, 17, '#4ade80');
+}
+
+function buildMall(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PLAZA);
+  addBuilding(33, 31, 13, 8, 3, { name: 'GALLERIA', neon: '#ff2d95' });
+  specials.push({ type: 'medallion', x: 39.5 * T, y: 41.5 * T, r: 28 });
+  specials.push({ type: 'fountain', x: 39.5 * T, y: 41.5 * T, r: 11 });
+  addPalm(32, 40, 1.05); addPalm(47, 40, 1.05);
+  addBench(35, 43); addBench(44, 43);
+  addPlanter(33, 43); addPlanter(46, 43);
+  addTrash(37, 43); addTrash(42, 43);
+  addStreetSign(32, 42, '#ff2d95');
+  addPOI('GALLERIA MALL', 39.5, 39, '#ff2d95');
+}
+
+function buildSkatepark(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PARKING);
+  specials.push({ type: 'skate', x1: 52, y1: 30, x2: 66, y2: 44 });
+  addProp('skateRamp', 55 * T, 34 * T, { flip: 0 });
+  addProp('skateRamp', 62 * T, 34 * T, { flip: 1 });
+  addProp('skateRamp', 55 * T, 40 * T, { flip: 0 });
+  addProp('skateRamp', 62 * T, 40 * T, { flip: 1 });
+  addProp('rail', 58 * T, 37 * T, { w: 46 });
+  addProp('rail', 58 * T, 43 * T, { w: 40 });
+  addTrash(66, 43); addCone(52, 43); addScooterRow(64, 30, 2);
+  addLamp(52, 31); addLamp(66, 31);
+  addPOI('SKATEPARK VICE', 59, 37, '#b98cff');
+}
+
+function buildConstruction(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.GRASS);
+  specials.push({ type: 'dirt', x1: 72, y1: 30, x2: 86, y2: 44 });
+  specials.push({ type: 'pit', x1: 75, y1: 33, x2: 83, y2: 39 });
+  addProp('crane', 84 * T, 41 * T);
+  addBarrier(72, 31); addBarrier(76, 31); addBarrier(80, 31);
+  addCone(73, 43); addCone(77, 42); addCone(81, 43); addCone(85, 42);
+  addCrate(74 * T, 42 * T); addCrate(75.5 * T, 43 * T); addCrate(80 * T, 43 * T);
+  addBush(86, 31, '#4a6b32'); addTrash(86, 43);
+  addPOI('OBRA DE VICE', 79, 37, '#ffd166');
+}
+
+function buildBeachClub(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PLAZA);
+  addBuilding(92, 31, 6, 4, 1, { name: 'BEACH CLUB', neon: '#24e0ff' });
+  fillTiles(92, 37, 96, 40, TILE.WATER, true);
+  specials.push({ type: 'pool', x1: 92, y1: 37, x2: 97, y2: 41 });
+  addUmbrella(92, 43, '#24e0ff'); addUmbrella(95, 43, '#ffd166'); addUmbrella(98, 43, '#ff2d95');
+  addTiki(97, 36); addBench(92, 44);
+  addLamp(92, 36); addLamp(98, 36);
+  addPOI('BEACH CLUB', 95, 36, '#24e0ff');
+}
+
+function buildGarden(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PARK);
+  fillTiles(38, 56, 41, 59, TILE.WATER, true);
+  specials.push({ type: 'pond', x1: 38, y1: 56, x2: 42, y2: 60 });
+  fillTiles(35, 53, 44, 53, TILE.PLAZA);
+  fillTiles(39, 53, 40, 60, TILE.PLAZA);
+  addGazebo(36 * T, 52 * T);
+  addPalm(32, 51, 1.05); addPalm(46, 51, 1); addPalm(32, 63, 1); addPalm(46, 63, 1.1);
+  for (let i = 0; i < 10; i++) addFlowers(33 + (i % 5) * 3, 55 + (i / 5 | 0) * 6, pick(['#ff2d95', '#ffd166', '#ff8a2b', '#b98cff', '#f3f0e6']));
+  addBush(33, 54); addBush(45, 54); addBush(33, 62); addBush(45, 62);
+  addBench(35, 55); addBench(44, 58); addBench(35, 61);
+  addLamp(32, 55); addLamp(46, 55);
+  addPOI('JARDIM BOTÂNICO', 39, 56, '#4ade80');
+}
+
+function buildDriveIn(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PARKING);
+  specials.push({ type: 'parking', x1: 52, y1: 50, x2: 66, y2: 64 });
+  parkingLots.push({ x1: 52, y1: 56, x2: 66, y2: 64, dir: 0 });
+  addProp('driveScreen', 59 * T, 51 * T);
+  addStall(53, 64, '#ff2d95'); addStall(65, 64, '#ffd166');
+  addCone(54, 57); addCone(64, 57); addTrash(66, 50);
+  addLamp(52, 55); addLamp(66, 55);
+  addGlow(59 * T, 51 * T, 80, '255,209,102', .22);
+  addPOI('DRIVE-IN VICE', 59, 57, '#ffd166');
+}
+
+function buildLighthouse(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PARK);
+  specials.push({ type: 'rock', x: 95 * T, y: 55 * T, r: 34 });
+  addProp('lighthouse', 95 * T, 55 * T);
+  addBush(92, 52); addBush(98, 52); addBush(92, 58); addBush(98, 58);
+  addPalm(92, 62, 1); addPalm(98, 62, 1);
+  addBench(92, 60); addBench(98, 60);
+  addLamp(92, 50); addLamp(98, 50);
+  addGlow(95 * T, 45 * T, 90, '255,240,190', .3);
+  addPOI('FAROL DE VICE', 95, 55, '#f3f0e6');
+}
+
+function buildMarket(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PLAZA);
+  specials.push({ type: 'medallion', x: 19 * T, y: 77 * T, r: 24 });
+  const cols = ['#ff2d95', '#24e0ff', '#ffd166', '#4ade80', '#ff8a2b'];
+  for (let i = 0; i < 5; i++) addStall(14 + i * 2.4, 72, cols[i]);
+  for (let i = 0; i < 5; i++) addStall(14 + i * 2.4, 82, cols[(i + 2) % 5]);
+  addCrate(12 * T, 76 * T); addCrate(13 * T, 79 * T); addCrate(25 * T, 76 * T);
+  addTrash(12, 73); addTrash(26, 81);
+  addPalm(12, 71, 1); addPalm(26, 71, 1); addPalm(12, 84, 1); addPalm(26, 84, 1);
+  addLamp(13, 77); addLamp(25, 77);
+  addPOI('FEIRA DE VICE', 19, 77, '#ff8a2b');
+}
+
+function buildGasStation(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PARKING);
+  addBuilding(42, 72, 5, 4, 5, { name: 'POSTO 24H', neon: '#4ade80' });
+  specials.push({ type: 'parking', x1: 32, y1: 70, x2: 46, y2: 84 });
+  parkingLots.push({ x1: 33, y1: 78, x2: 45, y2: 84, dir: 0 });
+  addProp('canopy', 38 * T, 77 * T, { w: 90, h: 38 });
+  addProp('pump', 36 * T, 77 * T); addProp('pump', 40 * T, 77 * T);
+  addTrash(32, 71); addCone(46, 84);
+  addLamp(32, 76); addLamp(46, 76);
+  addGlow(38 * T, 77 * T, 80, '74,222,128', .22);
+  addPOI('POSTO 24H', 38, 77, '#4ade80');
+}
+
+function buildRadioTower(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.GRASS);
+  specials.push({ type: 'medallion', x: 59 * T, y: 77 * T, r: 30 });
+  addProp('radioTower', 59 * T, 77 * T);
+  addBarrier(54, 82); addBarrier(58, 82); addBarrier(62, 82);
+  addCrate(52 * T, 82 * T); addCrate(53.5 * T, 83 * T);
+  addBush(53, 71); addBush(65, 71); addBush(53, 83); addBush(65, 83);
+  addTrash(65, 82);
+  addGlow(59 * T, 58 * T, 100, '255,59,91', .3);
+  addPOI('RÁDIO VICE', 59, 77, '#ff3b3b');
+}
+
+function buildArcade(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PLAZA);
+  addBuilding(72, 71, 7, 4, 4, { name: 'ARCADE', neon: '#ff2d95' });
+  addProp('ferris', 82 * T, 79 * T);
+  addStall(73, 83, '#24e0ff'); addStall(76, 83, '#ffd166');
+  addPalm(72, 83, 1); addPalm(86, 83, 1);
+  addTrash(86, 76); addBench(72, 79);
+  addProp('neonPillar', 74 * T, 82 * T, { color: '#ff2d95' });
+  addProp('neonPillar', 78 * T, 82 * T, { color: '#24e0ff' });
+  addGlow(82 * T, 79 * T, 90, '255,45,149', .25);
+  addPOI('PIER ARCADE', 79, 78, '#ff2d95');
+}
+
+function buildSunsetPark(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PARK);
+  fillTiles(19, 93, 22, 96, TILE.WATER, true);
+  specials.push({ type: 'pond', x1: 19, y1: 93, x2: 23, y2: 97 });
+  addGazebo(15 * T, 92 * T);
+  addPalm(13, 91, 1); addPalm(25, 91, 1); addPalm(13, 97, 1); addPalm(25, 97, 1);
+  addBench(16, 95); addBench(23, 91);
+  addBush(14, 96); addBush(24, 96);
+  addFlowers(15, 94, '#ff8a2b'); addFlowers(23, 94, '#ff2d95');
+  addLamp(13, 94); addLamp(25, 94);
+  addPOI('PARQUE SUNSET', 19, 94, '#ff8a2b');
+}
+
+function buildSpeedway(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PARKING);
+  specials.push({ type: 'track', x: 39 * T, y: 94 * T, rx: 108, ry: 56, small: true });
+  addBarrier(32, 90); addBarrier(36, 90); addBarrier(40, 90); addBarrier(44, 90);
+  addCone(33, 98); addCone(45, 98);
+  parkingLots.push({ x1: 34, y1: 96, x2: 44, y2: 98, dir: 0 });
+  addPalm(32, 98, 1); addPalm(46, 98, 1);
+  addLamp(32, 93); addLamp(46, 93);
+  addPOI('AUTÓDROMO VICE', 39, 94, '#ffd166');
+}
+
+function buildCourts(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PLAZA);
+  specials.push({ type: 'court', x: 56 * T, y: 93 * T, w: 70, h: 46, color: '#c2543c' });
+  specials.push({ type: 'court', x: 64 * T, y: 93 * T, w: 70, h: 46, color: '#3c7ac2' });
+  addProp('net', 56 * T, 93 * T, { w: 56, h: 30 });
+  addProp('net', 64 * T, 93 * T, { w: 56, h: 30 });
+  addBench(52, 97); addBench(58, 97); addBench(62, 97);
+  addTrash(52, 90); addTrash(66, 90);
+  addLamp(52, 96); addLamp(66, 96);
+  addPOI('QUADRAS DE VICE', 59, 93, '#24e0ff');
+}
+
+function buildTikiBar(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.PLAZA);
+  addTiki(75 * T, 92 * T); addTiki(79 * T, 92 * T); addTiki(83 * T, 92 * T);
+  addStall(72, 96, '#ff8a2b'); addStall(86, 96, '#ffd166');
+  addUmbrella(74, 95, '#ff2d95'); addUmbrella(78, 96, '#24e0ff'); addUmbrella(82, 95, '#ffd166');
+  addPalm(72, 97, 1); addPalm(86, 97, 1);
+  addTrash(72, 91); addLamp(75, 96); addLamp(83, 96);
+  addPOI('TIKI BAR', 79, 94, '#ff8a2b');
+}
+
+function buildOceanDrive(x1, y1, x2, y2) {
+  fillTiles(x1 + 1, y1 + 1, x2 - 1, y2 - 1, TILE.BOARDWALK);
+  addStall(93, 92, '#24e0ff'); addStall(97, 92, '#ff2d95');
+  addPalm(92, 90, 1); addPalm(98, 90, 1); addPalm(92, 97, 1); addPalm(98, 97, 1);
+  addBench(94, 95); addBench(97, 95);
+  addLamp(92, 94); addLamp(98, 94);
+  addTrash(92, 96);
+  addPOI('OCEAN DRIVE', 95, 94, '#24e0ff');
 }
 
 function generateWorld() {
+  buildings.length = 0; props.length = 0; lights.length = 0; signs.length = 0;
+  specials.length = 0; parkingLots.length = 0; pois.length = 0; glows.length = 0;
   for (let y = 0; y < MH; y++) {
     for (let x = 0; x < MW; x++) {
       if (x >= 112) setTile(x, y, TILE.WATER, true);
@@ -287,28 +592,104 @@ function generateWorld() {
       const x2 = bx === 4 ? 99 : x1 + 16;
       const y1 = 9 + by * 20;
       const y2 = by === 4 ? 99 : y1 + 16;
-      if (bx === 0 && by === 1) buildClub(x1, y1, x2, y2);
-      else if (bx === 0 && by === 2) buildMotel(x1, y1, x2, y2);
+      if (bx === 0 && by === 0) buildHotel(x1, y1, x2, y2);
+      else if (bx === 1 && by === 0) buildStadium(x1, y1, x2, y2);
       else if (bx === 2 && by === 0) buildGarage(x1, y1, x2, y2);
+      else if (bx === 3 && by === 0) buildPolice(x1, y1, x2, y2);
+      else if (bx === 4 && by === 0) buildHospital(x1, y1, x2, y2);
+      else if (bx === 0 && by === 1) buildClub(x1, y1, x2, y2);
+      else if (bx === 1 && by === 1) buildMall(x1, y1, x2, y2);
+      else if (bx === 2 && by === 1) buildSkatepark(x1, y1, x2, y2);
+      else if (bx === 3 && by === 1) buildConstruction(x1, y1, x2, y2);
+      else if (bx === 4 && by === 1) buildBeachClub(x1, y1, x2, y2);
+      else if (bx === 0 && by === 2) buildMotel(x1, y1, x2, y2);
+      else if (bx === 1 && by === 2) buildGarden(x1, y1, x2, y2);
+      else if (bx === 2 && by === 2) buildDriveIn(x1, y1, x2, y2);
       else if (bx === 3 && by === 2) buildHelipad(x1, y1, x2, y2);
+      else if (bx === 4 && by === 2) buildLighthouse(x1, y1, x2, y2);
+      else if (bx === 0 && by === 3) buildMarket(x1, y1, x2, y2);
+      else if (bx === 1 && by === 3) buildGasStation(x1, y1, x2, y2);
+      else if (bx === 2 && by === 3) buildRadioTower(x1, y1, x2, y2);
+      else if (bx === 3 && by === 3) buildArcade(x1, y1, x2, y2);
       else if (bx === 4 && by === 3) buildMarina(x1, y1, x2, y2);
+      else if (bx === 0 && by === 4) buildSunsetPark(x1, y1, x2, y2);
+      else if (bx === 1 && by === 4) buildSpeedway(x1, y1, x2, y2);
+      else if (bx === 2 && by === 4) buildCourts(x1, y1, x2, y2);
+      else if (bx === 3 && by === 4) buildTikiBar(x1, y1, x2, y2);
+      else if (bx === 4 && by === 4) buildOceanDrive(x1, y1, x2, y2);
       else buildBlock(x1, y1, x2, y2, bx, by);
     }
   }
   buildBeachPier();
+  // district entrance signs
+  const gateSigns = [
+    [19, 25, 'HOTEL VICE', '#ff8a2b'],
+    [39, 25, 'VICE STADIUM', '#4ade80'],
+    [79, 25, 'POLICE HQ', '#24a9ff'],
+    [95, 25, 'HOSPITAL', '#ff3b5b'],
+    [39, 45, 'GALLERIA', '#ff2d95'],
+    [59, 45, 'SKATEPARK', '#b98cff'],
+    [79, 45, 'CONSTRUÇÃO', '#ffd166'],
+    [95, 45, 'BEACH CLUB', '#24e0ff'],
+    [39, 65, 'JARDIM', '#4ade80'],
+    [59, 65, 'DRIVE-IN', '#ffd166'],
+    [95, 65, 'FAROL', '#f3f0e6'],
+    [19, 85, 'FEIRA', '#ff8a2b'],
+    [39, 85, 'POSTO 24H', '#4ade80'],
+    [59, 85, 'RÁDIO', '#ff3b5b'],
+    [79, 85, 'ARCADE', '#ff2d95'],
+    [19, 89, 'PARQUE', '#ff8a2b'],
+    [39, 89, 'AUTÓDROMO', '#ffd166'],
+    [59, 89, 'QUADRAS', '#24e0ff'],
+    [79, 89, 'TIKI BAR', '#ff8a2b'],
+    [95, 89, 'OCEAN DR', '#24e0ff']
+  ];
+  for (const g of gateSigns) addGateSign(g[0], g[1], g[2], g[3]);
+  // landmark "VICE CITY" gateway signs
+  addProp('citySign', 101 * T + 8, 52 * T + 14);
+  addProp('citySign', 60 * T + 8, 8 * T + 14);
+  addProp('citySign', 20 * T + 8, 96 * T + 14);
+  addProp('citySign', 96 * T + 8, 70 * T + 14);
+  // street furniture along the avenues
+  for (const [a, b] of VROADS) {
+    for (let y = 10; y < 97; y += 12) {
+      furnishStreet(a - 1, y);
+      furnishStreet(b + 1, y + 6);
+    }
+  }
+  for (const [a, b] of HROADS) {
+    for (let x = 10; x < 97; x += 13) {
+      furnishStreet(x, a - 1);
+      furnishStreet(x + 6, b + 1);
+    }
+  }
+  // beach: lifeguards, volleyball, kiosks, towels, palms
   for (let y = 10; y < MH; y += 7) addPalm(101, y, .9 + hash2(y, 3) * .25);
   for (let y = 8; y < MH; y += 6) addLamp(100, y);
-  for (let i = 0; i < 16; i++) {
-    const tx = randInt(105, 110), ty = randInt(6, 94);
+  for (const y of [14, 32, 50, 68, 86]) addLifeguard(106, y);
+  addLifeguard(109, 24);
+  specials.push({ type: 'court', x: 107 * T, y: 59 * T, w: 58, h: 42, color: '#d8b46a' });
+  addProp('net', 107 * T, 59 * T, { w: 52, h: 30 });
+  for (const y of [20, 40, 62, 80]) addStall(101, y, pick(['#ff2d95', '#24e0ff', '#ffd166', '#4ade80']));
+  for (let i = 0; i < 26; i++) {
+    const tx = randInt(105, 110), ty = randInt(6, 96);
     if (!isSolidAt(tx * T, ty * T) && tileAt(tx, ty) === TILE.SAND) {
-      if (i % 3 === 0) addUmbrella(tx, ty, pick(['#ff2d95', '#24e0ff', '#ffd166', '#b98cff']));
+      if (i % 4 === 0) addUmbrella(tx, ty, pick(['#ff2d95', '#24e0ff', '#ffd166', '#b98cff']));
+      else if (i % 4 === 1) addTowels(tx, ty, pick(['#ff2d95', '#24e0ff', '#ffd166', '#f3f0e6']));
+      else if (i % 4 === 2) addFlowers(tx, ty, '#f3f0e6');
       else addPalm(tx, ty, .65 + rand(.4));
     }
   }
-  for (let i = 0; i < 5; i++) addBoat(rand(114 * T, 126 * T), rand(14 * T, 88 * T), pick(['#f3f0e6', '#ff5fb5', '#24e0ff']));
+  for (let i = 0; i < 7; i++) addBoat(rand(114 * T, 126 * T), rand(10 * T, 92 * T), pick(['#f3f0e6', '#ff5fb5', '#24e0ff']));
   for (let y = 4; y < MH; y += 9) addPalm(2, y, .85);
   for (let x = 4; x < 96; x += 17) addLamp(x, 3);
   for (const cx of VCENTERS) for (const cy of HCENTERS) specials.push({ type: 'crosswalk', cx, cy });
+  // manholes & street decals at some intersections
+  for (const cx of VCENTERS) for (const cy of HCENTERS) {
+    if (hash2(cx * 7, cy * 11) > .45) specials.push({ type: 'manhole', x: (cx + .5) * T + 10, y: (cy + .5) * T + 8 });
+    if (hash2(cx * 3, cy * 5) > .6) specials.push({ type: 'skid', x: (cx + .5) * T, y: (cy + .5) * T, seed: hash2(cx, cy) });
+  }
+  addPOI('PRAIA DE VICE', 107, 44, '#24e0ff');
 }
 
 /* ----------------------------- pre-rendered world ----------------------------- */
@@ -325,43 +706,114 @@ function drawGround(c) {
       const t = tileAt(tx, ty);
       const x = tx * T, y = ty * T;
       const h = hash2(tx, ty);
+      const h2 = hash2(tx * 7 + 3, ty * 11 + 5);
+      const h3 = hash2(tx * 13 + 1, ty * 17 + 9);
       if (t === TILE.WATER) {
         c.fillStyle = (tx + ty) % 7 === 0 ? '#1a6280' : '#175a76';
         c.fillRect(x, y, T, T);
-        c.fillStyle = 'rgba(120,220,255,.08)';
-        c.fillRect(x, y + (h * 10 | 0), T, 1);
+        c.fillStyle = 'rgba(90,190,225,.10)';
+        c.fillRect(x, y + (h * 12 | 0), T, 1);
+        if (h2 > .55) {
+          c.fillStyle = 'rgba(150,235,255,.14)';
+          c.fillRect(x + (h2 * 10 | 0), y + (h3 * 12 | 0), 5 + (h3 * 6 | 0), 1);
+        }
+        if (h3 > .82) { c.fillStyle = 'rgba(220,250,255,.22)'; c.fillRect(x + 3, y + 4, 1, 1); }
       } else if (t === TILE.SAND) {
         c.fillStyle = h > .5 ? '#e3c589' : '#dcbd7f'; c.fillRect(x, y, T, T);
-        if (h > .72) { c.fillStyle = '#cdae73'; c.fillRect(x + (h * 12 | 0), y + (h * 9 | 0), 2, 1); }
+        // wind ripples
+        c.fillStyle = 'rgba(190,155,100,.22)';
+        if (h2 > .35) c.fillRect(x + 1, y + 3 + (h2 * 8 | 0), 7, 1);
+        if (h3 > .55) c.fillRect(x + 8, y + 9 + (h3 * 4 | 0), 6, 1);
+        // grains / shells
+        if (h > .7) { c.fillStyle = '#cdae73'; c.fillRect(x + (h * 12 | 0), y + (h2 * 9 | 0), 2, 1); }
+        if (h2 > .88) { c.fillStyle = '#fff2d0'; c.fillRect(x + 5, y + 7, 2, 1); c.fillRect(x + 6, y + 8, 1, 1); }
+        if (h3 > .92) { c.fillStyle = '#e88a6a'; c.fillRect(x + 9, y + 5, 2, 2); }
+        // footprints
+        if (h > .82 && h2 > .5) {
+          c.fillStyle = 'rgba(150,120,80,.35)';
+          c.fillRect(x + 4, y + 6, 2, 3); c.fillRect(x + 7, y + 10, 2, 3);
+        }
+        // wet band near the ocean
+        if (tx === 111) {
+          c.fillStyle = 'rgba(120,170,180,.20)'; c.fillRect(x + 10, y, 6, T);
+          c.fillStyle = 'rgba(230,250,255,.35)'; c.fillRect(x + 14, y + (h * 12 | 0), 2, 4);
+        }
       } else if (t === TILE.GRASS) {
-        c.fillStyle = h > .5 ? '#3b7447' : '#376d43'; c.fillRect(x, y, T, T);
-        if (h > .78) { c.fillStyle = '#4f8c5b'; c.fillRect(x + (h * 11 | 0), y + 3, 1, 3); }
+        c.fillStyle = (ty % 4 < 2) ? (h > .5 ? '#3b7447' : '#396f44') : (h > .5 ? '#376d43' : '#356a41');
+        c.fillRect(x, y, T, T);
+        if (h > .62) { c.fillStyle = '#4f8c5b'; c.fillRect(x + (h * 11 | 0), y + 3 + (h2 * 7 | 0), 1, 3); }
+        if (h2 > .74) { c.fillStyle = '#2c5c39'; c.fillRect(x + (h3 * 12 | 0), y + 10, 2, 1); }
+        if (h3 > .93) { c.fillStyle = pick(['#ffd166', '#ff8a2b', '#f3f0e6']); c.fillRect(x + 6, y + 6, 1, 1); }
       } else if (t === TILE.PARK) {
         c.fillStyle = h > .5 ? '#39784a' : '#347043'; c.fillRect(x, y, T, T);
-        if (h > .68) { c.fillStyle = '#4d925d'; c.fillRect(x + (h * 10 | 0), y + 5, 2, 2); }
+        c.fillStyle = 'rgba(255,255,255,.03)'; c.fillRect(x, y, T, 1);
+        if (h > .55) { c.fillStyle = '#4d925d'; c.fillRect(x + (h * 10 | 0), y + 5 + (h2 * 6 | 0), 2, 2); }
+        if (h2 > .78) { c.fillStyle = pick(['#ff2d95', '#ffd166', '#f3f0e6', '#b98cff']); c.fillRect(x + 3 + (h3 * 9 | 0), y + 4 + (h * 8 | 0), 1, 1); }
+        if (h3 > .86) { c.fillStyle = 'rgba(120,90,40,.4)'; c.fillRect(x + 8, y + 11, 3, 1); }
       } else if (t === TILE.ROAD) {
-        c.fillStyle = '#2a2b37'; c.fillRect(x, y, T, T);
-        if (h > .82) { c.fillStyle = '#323342'; c.fillRect(x + 2, y + 3, 5, 1); }
+        c.fillStyle = (h > .6) ? '#2b2c38' : '#292a36'; c.fillRect(x, y, T, T);
+        // asphalt aggregate
+        if (h > .45) { c.fillStyle = '#333445'; c.fillRect(x + (h * 12 | 0), y + (h2 * 12 | 0), 2, 1); }
+        if (h2 > .6) { c.fillStyle = '#242531'; c.fillRect(x + (h3 * 13 | 0), y + (h * 13 | 0), 3, 1); }
+        // tar seams
+        if (h3 > .9) { c.fillStyle = '#1f2029'; c.fillRect(x + 2, y + (h * 12 | 0), 12, 1); }
+        // cracks
+        if (h2 > .93) {
+          c.strokeStyle = 'rgba(18,18,26,.7)'; c.lineWidth = 1;
+          c.beginPath(); c.moveTo(x + 3, y + 3); c.lineTo(x + 8, y + 8); c.lineTo(x + 6, y + 13); c.stroke();
+        }
+        // oil stain
+        if (h > .9) { c.fillStyle = 'rgba(12,12,20,.4)'; c.beginPath(); c.ellipse(x + 8, y + 9, 4, 2, .4, 0, TAU); c.fill(); }
       } else if (t === TILE.SIDEWALK) {
-        c.fillStyle = h > .5 ? '#b6b0a8' : '#aea89f'; c.fillRect(x, y, T, T);
-        c.fillStyle = 'rgba(80,74,72,.18)'; c.fillRect(x, y, T, 1); c.fillRect(x, y, 1, T);
+        c.fillStyle = ((tx + ty) & 1)
+          ? (h > .5 ? '#bab4ab' : '#b3ada4')
+          : (h > .5 ? '#aca69d' : '#a6a097');
+        c.fillRect(x, y, T, T);
+        // slab joints
+        c.fillStyle = 'rgba(70,64,62,.30)'; c.fillRect(x, y, T, 1); c.fillRect(x, y, 1, T);
+        c.fillStyle = 'rgba(255,255,255,.06)'; c.fillRect(x + 1, y + 1, T - 2, 1);
+        // cracks & gum
+        if (h2 > .8) { c.strokeStyle = 'rgba(90,84,82,.5)'; c.lineWidth = 1; c.beginPath(); c.moveTo(x + 4, y + 2); c.lineTo(x + 7, y + 7); c.lineTo(x + 5, y + 12); c.stroke(); }
+        if (h3 > .86) { c.fillStyle = 'rgba(60,55,55,.45)'; c.fillRect(x + 10, y + 9, 2, 2); }
       } else if (t === TILE.PARKING) {
-        c.fillStyle = '#343541'; c.fillRect(x, y, T, T);
-        if (h > .84) { c.fillStyle = '#3d3e4b'; c.fillRect(x + 3, y + 6, 7, 1); }
+        c.fillStyle = h > .5 ? '#343541' : '#31323e'; c.fillRect(x, y, T, T);
+        if (h > .8) { c.fillStyle = '#3d3e4b'; c.fillRect(x + 3, y + 6, 7, 1); }
+        if (h2 > .7) { c.fillStyle = 'rgba(15,15,22,.35)'; c.beginPath(); c.ellipse(x + 7, y + 10, 3, 2, 0, 0, TAU); c.fill(); }
+        if (h3 > .9) { c.strokeStyle = 'rgba(200,200,210,.12)'; c.beginPath(); c.moveTo(x + 2, y + 13); c.lineTo(x + 13, y + 2); c.stroke(); }
       } else if (t === TILE.PLAZA) {
-        c.fillStyle = h > .5 ? '#bfa0a0' : '#b79696'; c.fillRect(x, y, T, T);
-        c.fillStyle = 'rgba(255,255,255,.06)'; c.fillRect(x, y, T, 1); c.fillRect(x, y, 1, T);
+        c.fillStyle = ((tx + ty) & 1)
+          ? (h > .5 ? '#c3a4a4' : '#bd9e9e')
+          : (h > .5 ? '#b59494' : '#af8e8e');
+        c.fillRect(x, y, T, T);
+        // Portuguese-pavement motif
+        c.fillStyle = 'rgba(255,255,255,.08)';
+        c.fillRect(x, y, T, 1); c.fillRect(x, y, 1, T);
+        c.fillStyle = 'rgba(110,75,85,.14)';
+        c.fillRect(x + 4, y + 4, 8, 8);
+        if (((tx + ty) & 1) && h2 > .5) {
+          c.fillStyle = 'rgba(255,255,255,.06)';
+          c.beginPath(); c.moveTo(x + 8, y + 3); c.lineTo(x + 13, y + 8); c.lineTo(x + 8, y + 13); c.lineTo(x + 3, y + 8); c.closePath(); c.fill();
+        }
+        if (h2 > .86) { c.fillStyle = 'rgba(90,60,70,.14)'; c.fillRect(x + 2, y + 11, 6, 2); }
       } else if (t === TILE.BOARDWALK) {
         c.fillStyle = h > .5 ? '#a9774e' : '#9f6d46'; c.fillRect(x, y, T, T);
-        c.fillStyle = 'rgba(60,30,15,.25)'; c.fillRect(x, y + 7, T, 1);
+        // vertical planks
+        c.fillStyle = 'rgba(60,30,15,.28)';
+        c.fillRect(x + 4, y, 1, T); c.fillRect(x + 10, y, 1, T);
+        c.fillStyle = 'rgba(255,220,180,.06)'; c.fillRect(x + 5, y, 4, T);
+        if (h2 > .8) { c.fillStyle = 'rgba(50,25,12,.4)'; c.fillRect(x + 6, y + 5, 1, 1); }
       } else if (t === TILE.PIER) {
         c.fillStyle = h > .5 ? '#7f5233' : '#754a2d'; c.fillRect(x, y, T, T);
-        c.fillStyle = 'rgba(40,20,10,.3)'; c.fillRect(x, y + 5, T, 1); c.fillRect(x, y + 12, T, 1);
+        // horizontal planks
+        c.fillStyle = 'rgba(40,20,10,.32)'; c.fillRect(x, y + 4, T, 1); c.fillRect(x, y + 11, T, 1);
+        c.fillStyle = 'rgba(255,210,160,.05)'; c.fillRect(x, y + 5, T, 1);
+        if (h2 > .82) { c.fillStyle = '#3a2a1a'; c.fillRect(x + 3, y + 6, 1, 1); c.fillRect(x + 12, y + 13, 1, 1); }
       } else if (t === TILE.BUILDING) {
         c.fillStyle = '#22202b'; c.fillRect(x, y, T, T);
       }
     }
   }
+  // road markings
   for (let ty = 0; ty < MH; ty++) {
     for (let tx = 0; tx < MW; tx++) {
       if (tileAt(tx, ty) !== TILE.ROAD) continue;
@@ -371,16 +823,22 @@ function drawGround(c) {
           c.fillStyle = 'rgba(255,209,102,.5)';
           if (ty % 2 === 0) c.fillRect(tx * T + 7, ty * T + 2, 2, 8);
         }
-        c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(tx * T + 2, ty * T, 1, T);
+        c.fillStyle = 'rgba(255,255,255,.09)'; c.fillRect(tx * T + 2, ty * T, 1, T);
+        c.fillStyle = 'rgba(255,255,255,.05)'; c.fillRect(tx * T + 13, ty * T, 1, T);
       } else if (o === 1) {
         if (HCENTERS.includes(ty)) {
           c.fillStyle = 'rgba(255,209,102,.5)';
           if (tx % 2 === 0) c.fillRect(tx * T + 2, ty * T + 7, 8, 2);
         }
-        c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(tx * T, ty * T + 2, T, 1);
+        c.fillStyle = 'rgba(255,255,255,.09)'; c.fillRect(tx * T, ty * T + 2, T, 1);
+        c.fillStyle = 'rgba(255,255,255,.05)'; c.fillRect(tx * T, ty * T + 13, T, 1);
+      } else if (o === 3) {
+        // intersection corner wear
+        c.fillStyle = 'rgba(0,0,0,.10)'; c.fillRect(tx * T + 2, ty * T + 2, T - 4, T - 4);
       }
     }
   }
+  // curbs and drains
   for (let ty = 0; ty < MH; ty++) {
     for (let tx = 0; tx < 100; tx++) {
       if (tileAt(tx, ty) !== TILE.SIDEWALK) continue;
@@ -389,6 +847,24 @@ function drawGround(c) {
       if (inRoad(tx - 1, ty)) c.fillRect(tx * T, ty * T, 2, T);
       if (inRoad(tx, ty + 1)) c.fillRect(tx * T, ty * T + T - 2, T, 2);
       if (inRoad(tx, ty - 1)) c.fillRect(tx * T, ty * T, T, 2);
+      const h = hash2(tx, ty);
+      if (h > .9 && (inRoad(tx + 1, ty) || inRoad(tx - 1, ty))) {
+        c.fillStyle = 'rgba(30,30,38,.55)';
+        c.fillRect(tx * T + (inRoad(tx + 1, ty) ? 11 : 2), ty * T + 5, 3, 6);
+      }
+    }
+  }
+  // park path edging
+  for (let ty = 0; ty < MH; ty++) {
+    for (let tx = 0; tx < 100; tx++) {
+      if (tileAt(tx, ty) !== TILE.PLAZA) continue;
+      const nearPark = tileAt(tx + 1, ty) === TILE.PARK || tileAt(tx - 1, ty) === TILE.PARK || tileAt(tx, ty + 1) === TILE.PARK || tileAt(tx, ty - 1) === TILE.PARK;
+      if (!nearPark) continue;
+      c.fillStyle = 'rgba(90,70,60,.22)';
+      if (tileAt(tx + 1, ty) === TILE.PARK) c.fillRect(tx * T + T - 2, ty * T, 2, T);
+      if (tileAt(tx - 1, ty) === TILE.PARK) c.fillRect(tx * T, ty * T, 2, T);
+      if (tileAt(tx, ty + 1) === TILE.PARK) c.fillRect(tx * T, ty * T + T - 2, T, 2);
+      if (tileAt(tx, ty - 1) === TILE.PARK) c.fillRect(tx * T, ty * T, T, 2);
     }
   }
 }
@@ -442,6 +918,132 @@ function drawSpecials(c) {
     } else if (s.type === 'clubSign') {
       c.fillStyle = '#1b0a18'; c.fillRect(s.x - s.w / 2, s.y - 9, s.w, 18);
       c.strokeStyle = '#ff2d95'; c.lineWidth = 1; c.strokeRect(s.x - s.w / 2, s.y - 9, s.w, 18);
+    } else if (s.type === 'medallion') {
+      c.save(); c.translate(s.x, s.y);
+      c.strokeStyle = 'rgba(255,209,102,.28)'; c.lineWidth = 2;
+      c.beginPath(); c.arc(0, 0, s.r, 0, TAU); c.stroke();
+      c.strokeStyle = 'rgba(120,80,90,.25)'; c.lineWidth = 1;
+      c.beginPath(); c.arc(0, 0, s.r - 5, 0, TAU); c.stroke();
+      c.fillStyle = 'rgba(255,209,102,.18)';
+      for (let i = 0; i < 8; i++) {
+        c.save(); c.rotate(i * TAU / 8);
+        c.beginPath(); c.moveTo(0, -s.r + 6); c.lineTo(4, 0); c.lineTo(0, s.r - 6); c.lineTo(-4, 0); c.closePath(); c.fill();
+        c.restore();
+      }
+      c.restore();
+    } else if (s.type === 'cross') {
+      c.fillStyle = s.color || 'rgba(255,59,91,.7)';
+      c.fillRect(s.x - 5, s.y - s.r, 10, s.r * 2);
+      c.fillRect(s.x - s.r, s.y - 5, s.r * 2, 10);
+      c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 1;
+      c.strokeRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+    } else if (s.type === 'court') {
+      c.save(); c.translate(s.x, s.y);
+      c.fillStyle = s.color || '#c2543c'; c.fillRect(-s.w / 2, -s.h / 2, s.w, s.h);
+      c.fillStyle = 'rgba(0,0,0,.10)';
+      for (let i = -s.w / 2; i < s.w / 2; i += 8) c.fillRect(i, -s.h / 2, 1, s.h);
+      c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 1.5;
+      c.strokeRect(-s.w / 2 + 2, -s.h / 2 + 2, s.w - 4, s.h - 4);
+      c.beginPath(); c.moveTo(0, -s.h / 2 + 2); c.lineTo(0, s.h / 2 - 2); c.stroke();
+      c.beginPath(); c.arc(0, 0, 10, 0, TAU); c.stroke();
+      c.strokeRect(-s.w / 2 + 2, -s.h / 4, 12, s.h / 2);
+      c.strokeRect(s.w / 2 - 14, -s.h / 4, 12, s.h / 2);
+      c.restore();
+    } else if (s.type === 'track') {
+      c.save(); c.translate(s.x, s.y);
+      // outer stadium ring
+      c.fillStyle = '#8a5a3a';
+      c.beginPath(); c.ellipse(0, 0, s.rx, s.ry, 0, 0, TAU); c.fill();
+      c.fillStyle = '#b4674b';
+      c.beginPath(); c.ellipse(0, 0, s.rx - 5, s.ry - 5, 0, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1;
+      for (let i = 1; i <= 3; i++) { c.beginPath(); c.ellipse(0, 0, s.rx - 5 - i * 7, s.ry - 5 - i * 7, 0, 0, TAU); c.stroke(); }
+      // field
+      const fx = s.rx * .58, fy = s.ry * .5;
+      c.fillStyle = s.small ? '#3d6b45' : '#3f7d4a';
+      c.fillRect(-fx, -fy, fx * 2, fy * 2);
+      c.fillStyle = 'rgba(255,255,255,.10)';
+      for (let i = 0; i < 8; i++) c.fillRect(-fx + i * (fx * 2 / 8), -fy, 1, fy * 2);
+      c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 1;
+      c.strokeRect(-fx, -fy, fx * 2, fy * 2);
+      c.beginPath(); c.moveTo(0, -fy); c.lineTo(0, fy); c.stroke();
+      c.beginPath(); c.arc(0, 0, 11, 0, TAU); c.stroke();
+      c.restore();
+    } else if (s.type === 'skate') {
+      c.save();
+      c.fillStyle = 'rgba(120,118,126,.55)';
+      c.fillRect(s.x1 * T, s.y1 * T, (s.x2 - s.x1) * T, (s.y2 - s.y1) * T);
+      c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1;
+      for (let x = s.x1; x <= s.x2; x += 3) { c.beginPath(); c.moveTo(x * T, s.y1 * T); c.lineTo(x * T, s.y2 * T); c.stroke(); }
+      // bowls
+      for (let i = 0; i < 3; i++) {
+        const bx = (s.x1 + 3 + i * 4.4) * T, by = (s.y1 + 4 + (i % 2) * 5) * T;
+        c.fillStyle = 'rgba(45,44,52,.55)'; c.beginPath(); c.ellipse(bx, by, 22, 13, 0, 0, TAU); c.fill();
+        c.strokeStyle = 'rgba(220,220,230,.25)'; c.lineWidth = 2; c.stroke();
+        c.fillStyle = 'rgba(150,230,255,.10)'; c.beginPath(); c.ellipse(bx, by, 16, 8, 0, 0, TAU); c.fill();
+      }
+      c.restore();
+    } else if (s.type === 'dirt') {
+      c.save();
+      c.fillStyle = '#6b5436';
+      c.fillRect(s.x1 * T, s.y1 * T, (s.x2 - s.x1) * T, (s.y2 - s.y1) * T);
+      for (let i = 0; i < 40; i++) {
+        const h = hash2(i, s.x1);
+        c.fillStyle = h > .5 ? '#7a6040' : '#5c472e';
+        c.fillRect(s.x1 * T + h * (s.x2 - s.x1) * T, s.y1 * T + hash2(i, s.y2) * (s.y2 - s.y1) * T, 3, 2);
+      }
+      c.strokeStyle = 'rgba(40,30,20,.35)'; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(s.x1 * T + 6, s.y2 * T - 8); c.bezierCurveTo(s.x1 * T + 40, s.y1 * T + 20, s.x2 * T - 50, s.y2 * T - 20, s.x2 * T - 6, s.y1 * T + 10); c.stroke();
+      c.restore();
+    } else if (s.type === 'pit') {
+      c.save();
+      c.fillStyle = '#2a2018';
+      c.fillRect(s.x1 * T, s.y1 * T, (s.x2 - s.x1) * T, (s.y2 - s.y1) * T);
+      c.fillStyle = '#1a1410';
+      c.fillRect(s.x1 * T + 5, s.y1 * T + 5, (s.x2 - s.x1) * T - 10, (s.y2 - s.y1) * T - 10);
+      c.strokeStyle = 'rgba(255,209,102,.5)'; c.lineWidth = 2;
+      c.setLineDash([6, 4]); c.strokeRect(s.x1 * T + 2, s.y1 * T + 2, (s.x2 - s.x1) * T - 4, (s.y2 - s.y1) * T - 4); c.setLineDash([]);
+      c.strokeStyle = 'rgba(160,150,140,.35)'; c.lineWidth = 1;
+      for (let i = 0; i < 8; i++) {
+        const rx = s.x1 * T + 10 + i * 12, ry = s.y1 * T + 10 + (i % 3) * 14;
+        c.beginPath(); c.moveTo(rx, ry); c.lineTo(rx + 6, ry + 10); c.stroke();
+      }
+      c.restore();
+    } else if (s.type === 'pond') {
+      const x = s.x1 * T, y = s.y1 * T, w = (s.x2 - s.x1) * T, h = (s.y2 - s.y1) * T;
+      c.save();
+      c.fillStyle = '#2b6a6f';
+      c.beginPath(); c.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(230,235,220,.5)'; c.lineWidth = 2;
+      c.beginPath(); c.ellipse(x + w / 2, y + h / 2, w / 2 - 2, h / 2 - 2, 0, 0, TAU); c.stroke();
+      c.fillStyle = 'rgba(150,230,255,.20)';
+      for (let i = 0; i < 5; i++) c.fillRect(x + 8 + i * 9, y + 8 + (i % 3) * 7, 6, 1);
+      c.fillStyle = '#4ade80';
+      for (let i = 0; i < 4; i++) c.beginPath(), c.ellipse(x + 10 + i * 13, y + 10 + (i % 2) * 10, 3, 2, 0, 0, TAU), c.fill();
+      c.restore();
+    } else if (s.type === 'manhole') {
+      c.save(); c.translate(s.x, s.y);
+      c.fillStyle = '#1d1e27'; c.beginPath(); c.arc(0, 0, 5, 0, TAU); c.fill();
+      c.strokeStyle = 'rgba(150,150,160,.4)'; c.lineWidth = 1;
+      c.beginPath(); c.arc(0, 0, 5, 0, TAU); c.stroke();
+      c.beginPath(); c.moveTo(-3, 0); c.lineTo(3, 0); c.moveTo(0, -3); c.lineTo(0, 3); c.stroke();
+      c.restore();
+    } else if (s.type === 'skid') {
+      c.save(); c.translate(s.x, s.y); c.rotate(s.seed * TAU);
+      c.strokeStyle = 'rgba(12,12,18,.45)'; c.lineWidth = 2;
+      c.beginPath(); c.arc(0, 0, 16, .2, 2.2); c.stroke();
+      c.beginPath(); c.arc(0, 4, 13, .4, 2.4); c.stroke();
+      c.restore();
+    } else if (s.type === 'rock') {
+      c.save(); c.translate(s.x, s.y);
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * TAU + .3, d = s.r * (.6 + hash2(i, 3) * .5);
+        c.fillStyle = i % 2 ? '#6f6a72' : '#5c5860';
+        c.beginPath(); c.ellipse(Math.cos(a) * d, Math.sin(a) * d, 7, 5, a, 0, TAU); c.fill();
+        c.fillStyle = 'rgba(255,255,255,.12)';
+        c.beginPath(); c.ellipse(Math.cos(a) * d - 1, Math.sin(a) * d - 2, 3, 2, a, 0, TAU); c.fill();
+      }
+      c.restore();
     }
   }
 }
@@ -450,31 +1052,186 @@ function drawBuildings(c) {
   for (const b of buildings) {
     const x = b.x * T, y = b.y * T, w = b.w * T, h = b.h * T;
     const p = b.pal;
-    c.fillStyle = 'rgba(10,8,18,.38)'; c.fillRect(x + 6, y + 7, w, h);
-    c.fillStyle = p.wall2; c.fillRect(x, y, w, h);
-    c.fillStyle = p.wall; c.fillRect(x + 2, y + 2, w - 4, h - 4);
-    c.fillStyle = p.roof; c.fillRect(x + 4, y + 4, w - 8, h - 8);
-    c.strokeStyle = p.trim; c.lineWidth = 1; c.strokeRect(x + 4.5, y + 4.5, w - 9, h - 9);
     const seed = b.seed;
-    c.fillStyle = 'rgba(40,34,50,.32)';
-    c.fillRect(x + 10 + (seed * 20 | 0), y + 10 + (seed * 13 | 0), 10, 7);
-    c.fillRect(x + w - 26 - (seed * 10 | 0), y + h - 24, 8, 8);
-    c.strokeStyle = 'rgba(30,26,40,.45)';
-    c.beginPath(); c.moveTo(x + w * .55, y + h * .25); c.lineTo(x + w * .55, y + h * .6); c.stroke();
-    const lit = b.seed > .4;
-    for (let wx = x + 8; wx < x + w - 10; wx += 11) {
-      c.fillStyle = lit && hash2(wx, y) > .45 ? '#ffe8a8' : '#302c3b'; c.fillRect(wx, y + h - 9, 6, 5);
+    // cast shadow
+    c.fillStyle = 'rgba(8,6,18,.42)'; c.fillRect(x + 8, y + 9, w, h);
+    // outer wall / parapet
+    c.fillStyle = p.wall2; c.fillRect(x, y, w, h);
+    c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(x, y, w, 2);
+    c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x, y + h - 3, w, 3);
+    // roof slab
+    c.fillStyle = p.roof; c.fillRect(x + 3, y + 3, w - 6, h - 6);
+    // roof panel grid
+    c.fillStyle = 'rgba(0,0,0,.055)';
+    for (let ry = y + 3; ry < y + h - 6; ry += 9) c.fillRect(x + 3, ry, w - 6, 1);
+    for (let rx = x + 3; rx < x + w - 6; rx += 9) c.fillRect(rx, y + 3, 1, h - 6);
+    // parapet trim
+    c.strokeStyle = p.trim; c.lineWidth = 1; c.strokeRect(x + 3.5, y + 3.5, w - 7, h - 7);
+    c.fillStyle = 'rgba(255,255,255,.10)'; c.fillRect(x + 4, y + 4, w - 8, 1);
+
+    // rooftop grime
+    c.fillStyle = 'rgba(40,34,50,.22)';
+    c.fillRect(x + 8 + (seed * 23 | 0), y + 9 + (seed * 15 | 0), 12, 8);
+    c.fillStyle = 'rgba(40,34,50,.14)';
+    c.fillRect(x + w - 30 - (seed * 12 | 0), y + h - 26, 10, 9);
+
+    // rooftop AC units
+    const acN = (w > 78 && h > 64) ? 2 : 1;
+    for (let i = 0; i < acN; i++) {
+      const ax = x + 8 + ((seed * 37 + i * 53) % Math.max(12, w - 32)) | 0;
+      const ay = y + 9 + ((seed * 29 + i * 41) % Math.max(12, h - 42)) | 0;
+      c.fillStyle = 'rgba(20,18,28,.28)'; c.fillRect(ax + 2, ay + 2, 15, 11);
+      c.fillStyle = '#8a8f9a'; c.fillRect(ax, ay, 15, 11);
+      c.fillStyle = '#b9bec7'; c.fillRect(ax + 1, ay + 1, 13, 3);
+      c.strokeStyle = '#5c6069'; c.lineWidth = 1;
+      c.beginPath(); c.arc(ax + 7, ay + 7, 3, 0, TAU); c.stroke();
+      c.beginPath(); c.moveTo(ax + 7, ay + 4); c.lineTo(ax + 7, ay + 10); c.stroke();
+      c.beginPath(); c.moveTo(ax + 4, ay + 7); c.lineTo(ax + 10, ay + 7); c.stroke();
     }
+
+    // water tank / antenna / solar / skylight
+    if (seed > .58 && w > 56 && h > 56) {
+      const tx = x + w - 26 - (seed * 10 | 0), ty = y + 16 + (seed * 9 | 0);
+      c.fillStyle = 'rgba(20,18,28,.25)'; c.fillRect(tx + 2, ty + 2, 14, 12);
+      c.fillStyle = '#7d6a58'; c.fillRect(tx, ty, 14, 12);
+      c.fillStyle = '#9c8770'; c.fillRect(tx + 2, ty + 1, 10, 4);
+      c.strokeStyle = '#4e4034'; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(tx + 3, ty + 12); c.lineTo(tx + 3, ty + 16); c.moveTo(tx + 11, ty + 12); c.lineTo(tx + 11, ty + 16); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(tx + 4, ty + 3, 6, 1);
+    } else if (seed < .38 && w > 46) {
+      const ax = x + 12 + (seed * 18 | 0), ay = y + h - 24;
+      c.strokeStyle = '#4a4652'; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(ax, ay); c.lineTo(ax, ay - 16); c.stroke();
+      c.beginPath(); c.moveTo(ax - 4, ay - 16); c.lineTo(ax + 4, ay - 16); c.stroke();
+      c.beginPath(); c.moveTo(ax, ay - 8); c.lineTo(ax + 5, ay - 12); c.moveTo(ax, ay - 12); c.lineTo(ax - 5, ay - 16); c.stroke();
+      c.fillStyle = '#ff3b5b'; c.fillRect(ax - 1, ay - 18, 2, 2);
+    }
+    if (seed > .46 && w > 64 && h > 48) {
+      const sx = x + 14 + (seed * 15 | 0), sy = y + h - 30 - (seed * 8 | 0);
+      c.fillStyle = '#22384f'; c.fillRect(sx, sy, 18, 10);
+      c.strokeStyle = 'rgba(150,220,255,.35)'; c.lineWidth = 1; c.strokeRect(sx, sy, 18, 10);
+      c.beginPath(); c.moveTo(sx + 6, sy); c.lineTo(sx + 6, sy + 10); c.moveTo(sx + 12, sy); c.lineTo(sx + 12, sy + 10); c.stroke();
+    }
+    if (seed > .82 && h > 64) {
+      c.fillStyle = '#4a7d52'; c.fillRect(x + 10, y + 12, 20, 12);
+      c.fillStyle = '#5d9663'; c.fillRect(x + 12, y + 14, 7, 4); c.fillRect(x + 20, y + 16, 6, 4);
+    }
+
+    // rooftop access hut, pipe run and vents on larger roofs
+    if (w > 70 && h > 55) {
+      const sx = x + 12 + ((seed * 21) | 0), sy = y + 14 + ((seed * 17) | 0);
+      c.fillStyle = 'rgba(20,18,28,.25)'; c.fillRect(sx + 2, sy + 2, 18, 13);
+      c.fillStyle = '#6f6a78'; c.fillRect(sx, sy, 18, 13);
+      c.fillStyle = '#8f8a98'; c.fillRect(sx + 1, sy + 1, 16, 3);
+      c.fillStyle = '#38343f'; c.fillRect(sx + 7, sy + 6, 5, 7);
+      c.fillStyle = '#b9bec7'; c.fillRect(sx + 13, sy + 6, 2, 2);
+      c.fillStyle = '#5c5765'; c.fillRect(x + 6, y + 7, w - 12, 2);
+      c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(x + 6, y + 7, w - 12, 1);
+      for (let i = 0; i < 3; i++) {
+        const vx = x + 10 + i * ((w - 22) / 3), vy = y + h - 21;
+        c.fillStyle = '#4a4654'; c.fillRect(vx, vy, 5, 5);
+        c.fillStyle = '#6b6674'; c.fillRect(vx + 1, vy + 1, 3, 1);
+      }
+    }
+    if (w > 110 && h > 70) {
+      const ax2 = x + w - 44, ay2 = y + 12;
+      c.fillStyle = 'rgba(20,18,28,.25)'; c.fillRect(ax2 + 2, ay2 + 2, 14, 10);
+      c.fillStyle = '#9a9fa9'; c.fillRect(ax2, ay2, 14, 10);
+      c.fillStyle = '#c2c7cf'; c.fillRect(ax2 + 1, ay2 + 1, 12, 2);
+      c.strokeStyle = '#5c6069'; c.lineWidth = 1;
+      c.beginPath(); c.arc(ax2 + 7, ay2 + 6, 2.5, 0, TAU); c.stroke();
+    }
+
+    // side windows (vertical edges)
+    for (let wy = y + 10; wy < y + h - 16; wy += 13) {
+      const litA = hash2(y, wy) > .55, litB = hash2(wy, x) > .55;
+      c.fillStyle = litA ? 'rgba(255,232,168,.85)' : '#2b2736'; c.fillRect(x + 1, wy, 2, 6);
+      c.fillStyle = litB ? 'rgba(255,232,168,.7)' : '#2b2736'; c.fillRect(x + w - 3, wy, 2, 6);
+    }
+
+    // facade strip along the bottom
+    const fh = 12;
+    c.fillStyle = p.wall2; c.fillRect(x, y + h - fh, w, fh);
+    c.fillStyle = p.wall; c.fillRect(x + 1, y + h - fh + 1, w - 2, fh - 2);
+    c.fillStyle = 'rgba(0,0,0,.16)'; c.fillRect(x + 1, y + h - 2, w - 2, 2);
+    c.fillStyle = 'rgba(255,255,255,.10)'; c.fillRect(x + 1, y + h - fh + 1, w - 2, 1);
+
+    // storefront windows
+    for (let wx = x + 6; wx < x + w - 9; wx += 12) {
+      const lit = hash2(wx, y) > .42;
+      c.fillStyle = lit ? '#ffe8a8' : '#302c3b';
+      c.fillRect(wx, y + h - fh + 3, 7, 5);
+      c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(wx, y + h - fh + 3, 7, 1);
+      c.fillStyle = p.trim; c.fillRect(wx - 1, y + h - fh + 8, 9, 1);
+      if (lit && hash2(wx, y * 3) > .6) {
+        c.fillStyle = 'rgba(255,232,168,.10)'; c.fillRect(wx - 2, y + h - fh + 9, 11, 3);
+      }
+    }
+
+    // door + stoop
     c.fillStyle = '#1d1626'; c.fillRect(x + w / 2 - 6, y + h - 8, 12, 8);
+    c.fillStyle = 'rgba(255,232,168,.35)'; c.fillRect(x + w / 2 - 4, y + h - 7, 8, 1);
     c.fillStyle = p.trim; c.fillRect(x + w / 2 - 10, y + h - 11, 20, 3);
-    for (let wy = y + 9; wy < y + h - 12; wy += 12) { c.fillStyle = '#2b2736'; c.fillRect(x + w - 4, wy, 2, 6); }
-    if (b.pool) { c.fillStyle = '#2a8f9f'; c.fillRect(x + 8, y + 8, 18, 12); }
+    c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(x + w / 2 - 10, y + h - 11, 20, 1);
+
+    // awning for shops
+    if (b.name && w > 52) {
+      const aw = Math.min(w - 16, 46), ax = x + w / 2 - aw / 2, ay = y + h - fh + 2;
+      c.fillStyle = 'rgba(20,14,26,.35)'; c.fillRect(ax, ay, aw, 5);
+      for (let i = 0; i < aw; i += 6) {
+        c.fillStyle = i % 12 === 0 ? p.trim : '#2a2233';
+        c.fillRect(ax + i, ay, 6, 4);
+      }
+      c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(ax, ay, aw, 1);
+    }
+
+    // neon underglow / sign glow
+    if (b.neon) {
+      c.fillStyle = b.neon + '55'; c.fillRect(x + 2, y + h - 1, w - 4, 1);
+      c.fillStyle = b.neon + '22'; c.fillRect(x + 4, y + h, w - 8, 2);
+    }
+
+    // balconies for taller buildings
+    if (h > 88) {
+      for (let by2 = y + 18; by2 < y + h - 26; by2 += 20) {
+        c.fillStyle = 'rgba(30,26,40,.45)'; c.fillRect(x + w - 12, by2, 9, 2);
+        c.fillStyle = p.trim; c.fillRect(x + w - 12, by2 - 1, 9, 1);
+      }
+    }
+
+    // special uses
+    if (b.pool) { c.fillStyle = '#2a8f9f'; c.fillRect(x + 8, y + 8, 18, 12); c.strokeStyle = '#e8e1d4'; c.lineWidth = 1; c.strokeRect(x + 8, y + 8, 18, 12); }
     if (b.garage) {
-      c.fillStyle = '#191622'; c.fillRect(x + w / 2 - 18, y + h - 12, 36, 12);
-      c.fillStyle = 'rgba(255,209,102,.4)';
-      for (let i = 0; i < 4; i++) c.fillRect(x + w / 2 - 16, y + h - 10 + i * 2, 32, 1);
+      c.fillStyle = '#191622'; c.fillRect(x + w / 2 - 20, y + h - 13, 40, 13);
+      c.fillStyle = 'rgba(255,209,102,.42)';
+      for (let i = 0; i < 4; i++) c.fillRect(x + w / 2 - 18, y + h - 11 + i * 2, 36, 1);
+      c.fillStyle = '#2a2433'; c.fillRect(x + w / 2 - 20, y + h - 13, 40, 1);
+    }
+    if (b.club) {
+      c.fillStyle = '#ff2d95'; c.fillRect(x + 2, y + h - fh, w - 4, 1);
+      c.fillStyle = 'rgba(255,45,149,.30)'; c.fillRect(x + 6, y + h - 1, w - 12, 3);
+      c.fillStyle = '#24e0ff'; c.fillRect(x + 2, y + h - fh - 2, 10, 1);
     }
   }
+}
+
+function drawSigns(c) {
+  c.save();
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  for (const s of signs) {
+    const w = Math.max(28, s.text.length * 6 + 10);
+    c.fillStyle = 'rgba(12,8,18,.82)';
+    c.fillRect(s.x - w / 2, s.y - 10, w, 13);
+    c.strokeStyle = s.color; c.lineWidth = 1;
+    c.strokeRect(s.x - w / 2 + .5, s.y - 9.5, w - 1, 12);
+    c.font = '6px PressStart, monospace';
+    c.fillStyle = s.color;
+    c.fillText(s.text, s.x, s.y - 3.5);
+    c.fillStyle = 'rgba(255,255,255,.18)';
+    c.fillRect(s.x - w / 2 + 2, s.y - 9, w - 4, 1);
+  }
+  c.restore();
 }
 
 function drawProps(c) {
@@ -522,6 +1279,278 @@ function drawProps(c) {
     } else if (p.type === 'neonPillar') {
       c.fillStyle = '#211126'; c.fillRect(p.x - 3, p.y - 18, 6, 18);
       c.fillStyle = p.color; c.fillRect(p.x - 1, p.y - 17, 2, 13);
+    } else if (p.type === 'bush') {
+      c.fillStyle = 'rgba(8,6,16,.22)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 2, 9, 3.5, 0, 0, TAU); c.fill();
+      c.fillStyle = '#2c623c'; c.beginPath(); c.arc(p.x - 4, p.y - 3, 5, 0, TAU); c.arc(p.x + 3, p.y - 4, 6, 0, TAU); c.arc(p.x, p.y - 8, 5, 0, TAU); c.fill();
+      c.fillStyle = p.color; c.beginPath(); c.arc(p.x - 3, p.y - 5, 3.5, 0, TAU); c.arc(p.x + 3, p.y - 6, 3.5, 0, TAU); c.arc(p.x, p.y - 9, 3, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.16)'; c.fillRect(p.x - 4, p.y - 9, 2, 1); c.fillRect(p.x + 2, p.y - 7, 2, 1);
+      if (p.seed > 60) { c.fillStyle = '#ff2d95'; c.fillRect(p.x - 2, p.y - 7, 1, 1); c.fillRect(p.x + 4, p.y - 4, 1, 1); }
+    } else if (p.type === 'flowers') {
+      c.fillStyle = '#2f6b41'; c.fillRect(p.x, p.y - 3, 1, 3); c.fillRect(p.x + 3, p.y - 4, 1, 4);
+      c.fillStyle = p.color; c.fillRect(p.x - 1, p.y - 5, 3, 2); c.fillRect(p.x + 2, p.y - 6, 3, 2);
+      c.fillStyle = '#ffd166'; c.fillRect(p.x, p.y - 5, 1, 1); c.fillRect(p.x + 3, p.y - 6, 1, 1);
+    } else if (p.type === 'trash') {
+      c.fillStyle = 'rgba(8,6,16,.22)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 5, 2, 0, 0, TAU); c.fill();
+      c.fillStyle = '#2f3a3d'; c.fillRect(p.x - 4, p.y - 9, 8, 9);
+      c.fillStyle = '#465356'; c.fillRect(p.x - 4, p.y - 9, 8, 2);
+      c.fillStyle = '#1d2528'; c.fillRect(p.x - 5, p.y - 10, 10, 2);
+      c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(p.x - 3, p.y - 7, 1, 5);
+      c.fillStyle = '#4ade80'; c.fillRect(p.x + 1, p.y - 6, 2, 1);
+    } else if (p.type === 'streetSign') {
+      c.fillStyle = 'rgba(8,6,16,.22)'; c.beginPath(); c.ellipse(p.x + 1, p.y + 1, 4, 2, 0, 0, TAU); c.fill();
+      c.fillStyle = '#6b6f7c'; c.fillRect(p.x - 1, p.y - 16, 2, 16);
+      c.fillStyle = p.color; c.fillRect(p.x - 6, p.y - 17, 12, 5);
+      c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1; c.strokeRect(p.x - 5.5, p.y - 16.5, 11, 4);
+      c.fillStyle = 'rgba(255,255,255,.7)'; c.fillRect(p.x - 4, p.y - 15, 5, 1);
+      c.fillStyle = p.color; c.fillRect(p.x + 1, p.y - 11, 5, 3);
+    } else if (p.type === 'gateSign') {
+      c.fillStyle = 'rgba(8,6,16,.28)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 30, 4, 0, 0, TAU); c.fill();
+      c.fillStyle = '#2a2633'; c.fillRect(p.x - 26, p.y - 30, 3, 30); c.fillRect(p.x + 23, p.y - 30, 3, 30);
+      c.fillStyle = '#120b1a'; c.fillRect(p.x - 33, p.y - 38, 66, 14);
+      c.strokeStyle = p.color; c.lineWidth = 1; c.strokeRect(p.x - 32.5, p.y - 37.5, 65, 13);
+      c.save();
+      c.font = '5px PressStart, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = p.color; c.shadowColor = p.color; c.shadowBlur = 6;
+      c.fillText(p.text, p.x, p.y - 31);
+      c.restore();
+      c.fillStyle = p.color; c.globalAlpha = .55; c.fillRect(p.x - 30, p.y - 24, 60, 1); c.globalAlpha = 1;
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 33, p.y - 38, 3, 2); c.fillRect(p.x + 30, p.y - 38, 3, 2);
+    } else if (p.type === 'citySign') {
+      c.fillStyle = 'rgba(8,6,16,.3)'; c.beginPath(); c.ellipse(p.x + 3, p.y + 1, 46, 6, 0, 0, TAU); c.fill();
+      c.fillStyle = '#2a2633'; c.fillRect(p.x - 38, p.y - 40, 5, 40); c.fillRect(p.x + 33, p.y - 40, 5, 40);
+      c.fillStyle = '#120b1a'; c.fillRect(p.x - 46, p.y - 54, 92, 28);
+      c.strokeStyle = '#ff2d95'; c.lineWidth = 1; c.strokeRect(p.x - 45.5, p.y - 53.5, 91, 27);
+      c.strokeStyle = 'rgba(36,224,255,.5)'; c.strokeRect(p.x - 43.5, p.y - 51.5, 87, 23);
+      c.save();
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = '11px PressStart, monospace';
+      c.fillStyle = '#ff2d95'; c.shadowColor = '#ff2d95'; c.shadowBlur = 10;
+      c.fillText('VICE', p.x, p.y - 45);
+      c.fillStyle = '#24e0ff'; c.shadowColor = '#24e0ff'; c.shadowBlur = 10;
+      c.fillText('CITY', p.x, p.y - 34);
+      c.restore();
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 46, p.y - 54, 4, 3); c.fillRect(p.x + 42, p.y - 54, 4, 3);
+      c.fillStyle = 'rgba(255,209,102,.35)';
+      c.fillRect(p.x - 30, p.y - 56, 18, 1); c.fillRect(p.x + 12, p.y - 56, 18, 1);
+    } else if (p.type === 'mailbox') {
+      c.fillStyle = '#3b4f8a'; c.fillRect(p.x - 4, p.y - 8, 8, 6);
+      c.fillStyle = '#5570b8'; c.fillRect(p.x - 4, p.y - 8, 8, 2);
+      c.fillStyle = '#1d2a4a'; c.fillRect(p.x - 2, p.y - 6, 4, 1);
+      c.fillStyle = '#6b6f7c'; c.fillRect(p.x - 1, p.y - 2, 2, 2);
+    } else if (p.type === 'planter') {
+      c.fillStyle = 'rgba(8,6,16,.22)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 9, 3, 0, 0, TAU); c.fill();
+      c.fillStyle = '#8c8580'; c.fillRect(p.x - 7, p.y - 7, 14, 7);
+      c.fillStyle = '#a8a19a'; c.fillRect(p.x - 7, p.y - 7, 14, 2);
+      c.fillStyle = '#4a3a2c'; c.fillRect(p.x - 5, p.y - 7, 10, 2);
+      c.fillStyle = '#3d8653'; c.beginPath(); c.arc(p.x - 2, p.y - 8, 3, 0, TAU); c.arc(p.x + 3, p.y - 8, 3, 0, TAU); c.fill();
+      if (p.seed > 50) { c.fillStyle = '#ff2d95'; c.fillRect(p.x - 3, p.y - 9, 1, 1); c.fillRect(p.x + 2, p.y - 10, 1, 1); }
+    } else if (p.type === 'scooter') {
+      c.fillStyle = 'rgba(8,6,16,.25)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 8, 2.5, 0, 0, TAU); c.fill();
+      c.fillStyle = '#16141d'; c.fillRect(p.x - 7, p.y - 3, 3, 3); c.fillRect(p.x + 4, p.y - 3, 3, 3);
+      c.fillStyle = p.color; c.fillRect(p.x - 5, p.y - 6, 10, 4);
+      c.fillStyle = '#d8d1c2'; c.fillRect(p.x - 3, p.y - 8, 6, 2);
+      c.fillStyle = '#3a3444'; c.fillRect(p.x + 3, p.y - 10, 2, 5);
+      c.fillStyle = '#ffe6a3'; c.fillRect(p.x + 4, p.y - 11, 3, 2);
+    } else if (p.type === 'cone') {
+      c.fillStyle = 'rgba(8,6,16,.2)'; c.beginPath(); c.ellipse(p.x + 1, p.y + 1, 4, 1.5, 0, 0, TAU); c.fill();
+      c.fillStyle = '#ff8a2b'; c.beginPath(); c.moveTo(p.x, p.y - 9); c.lineTo(p.x + 4, p.y); c.lineTo(p.x - 4, p.y); c.closePath(); c.fill();
+      c.fillStyle = '#f3f0e6'; c.fillRect(p.x - 2, p.y - 5, 4, 2);
+    } else if (p.type === 'barrier') {
+      c.fillStyle = 'rgba(8,6,16,.22)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 10, 2.5, 0, 0, TAU); c.fill();
+      c.fillStyle = '#5b5f6a'; c.fillRect(p.x - 8, p.y - 2, 2, 3); c.fillRect(p.x + 6, p.y - 2, 2, 3);
+      c.fillStyle = '#d8d1c2'; c.fillRect(p.x - 10, p.y - 8, 20, 6);
+      for (let i = 0; i < 20; i += 6) { c.fillStyle = '#ff3b3b'; c.fillRect(p.x - 10 + i, p.y - 8, 3, 6); }
+      c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(p.x - 10, p.y - 8, 20, 1);
+    } else if (p.type === 'stall') {
+      c.fillStyle = 'rgba(8,6,16,.26)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 12, 3.5, 0, 0, TAU); c.fill();
+      c.fillStyle = '#5a3a22'; c.fillRect(p.x - 10, p.y - 7, 20, 7);
+      c.fillStyle = '#7a5230'; c.fillRect(p.x - 10, p.y - 7, 20, 2);
+      // awning
+      c.fillStyle = p.color; c.fillRect(p.x - 12, p.y - 18, 24, 5);
+      c.fillStyle = 'rgba(255,255,255,.55)';
+      for (let i = 0; i < 24; i += 8) c.fillRect(p.x - 12 + i, p.y - 18, 4, 5);
+      c.fillStyle = '#3a2a1a';
+      for (let i = 0; i < 4; i++) c.fillRect(p.x - 11 + i * 7, p.y - 13, 2, 6);
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 4, p.y - 10, 3, 2); c.fillRect(p.x + 2, p.y - 10, 3, 2);
+      c.fillStyle = '#4ade80'; c.fillRect(p.x - 1, p.y - 11, 2, 2);
+      if (p.seed > 5) { c.fillStyle = '#ff2d95'; c.fillRect(p.x + 6, p.y - 9, 2, 1); }
+    } else if (p.type === 'gazebo') {
+      c.fillStyle = 'rgba(8,6,16,.25)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 14, 4, 0, 0, TAU); c.fill();
+      c.fillStyle = '#d8d1c2'; c.fillRect(p.x - 12, p.y - 6, 24, 4);
+      c.fillStyle = '#b9b0a0'; c.fillRect(p.x - 12, p.y - 2, 24, 2);
+      c.fillStyle = '#f3f0e6';
+      c.beginPath(); c.moveTo(p.x, p.y - 24); c.lineTo(p.x + 15, p.y - 8); c.lineTo(p.x - 15, p.y - 8); c.closePath(); c.fill();
+      c.fillStyle = '#e2dccd';
+      for (let i = -1; i <= 1; i++) { c.beginPath(); c.moveTo(p.x, p.y - 24); c.lineTo(p.x + i * 9, p.y - 8); c.lineTo(p.x + i * 9 + 4, p.y - 8); c.closePath(); c.fill(); }
+      c.fillStyle = '#8a7f70'; c.fillRect(p.x - 11, p.y - 8, 2, 6); c.fillRect(p.x + 9, p.y - 8, 2, 6);
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 1, p.y - 26, 2, 2);
+    } else if (p.type === 'tiki') {
+      c.fillStyle = 'rgba(8,6,16,.25)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 11, 3, 0, 0, TAU); c.fill();
+      c.fillStyle = '#7a5230'; c.fillRect(p.x - 9, p.y - 6, 2, 6); c.fillRect(p.x + 7, p.y - 6, 2, 6);
+      c.fillStyle = '#5a3a22'; c.fillRect(p.x - 8, p.y - 9, 16, 4);
+      c.fillStyle = '#c9a06a';
+      c.beginPath(); c.moveTo(p.x - 12, p.y - 9); c.lineTo(p.x, p.y - 22); c.lineTo(p.x + 12, p.y - 9); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(90,58,34,.5)'; c.lineWidth = 1;
+      for (let i = -8; i <= 8; i += 4) { c.beginPath(); c.moveTo(p.x, p.y - 21); c.lineTo(p.x + i, p.y - 9); c.stroke(); }
+      c.fillStyle = '#ff8a2b'; c.fillRect(p.x - 11, p.y - 12, 2, 3); c.fillRect(p.x + 9, p.y - 12, 2, 3);
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 11, p.y - 13, 2, 1); c.fillRect(p.x + 9, p.y - 13, 2, 1);
+    } else if (p.type === 'lifeguard') {
+      c.fillStyle = 'rgba(8,6,16,.25)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 12, 3.5, 0, 0, TAU); c.fill();
+      c.fillStyle = '#8a6a45'; c.fillRect(p.x - 9, p.y - 4, 2, 4); c.fillRect(p.x + 7, p.y - 4, 2, 4);
+      c.fillStyle = '#f3f0e6'; c.fillRect(p.x - 11, p.y - 14, 22, 10);
+      c.fillStyle = '#ff3b3b'; c.fillRect(p.x - 11, p.y - 14, 22, 3);
+      c.fillStyle = '#24e0ff'; c.fillRect(p.x - 7, p.y - 10, 5, 4);
+      c.fillStyle = '#8a6a45'; c.fillRect(p.x - 1, p.y - 4, 2, 4);
+      c.fillStyle = '#d8d1c2'; c.fillRect(p.x - 1, p.y - 24, 2, 10);
+      c.fillStyle = '#ff3b3b'; c.beginPath(); c.moveTo(p.x + 1, p.y - 24); c.lineTo(p.x + 8, p.y - 21); c.lineTo(p.x + 1, p.y - 18); c.closePath(); c.fill();
+    } else if (p.type === 'towel') {
+      c.save(); c.translate(p.x, p.y); c.rotate((hash2(p.x, p.y) - .5) * .5);
+      c.fillStyle = 'rgba(8,6,16,.14)'; c.fillRect(-7, -2, 16, 8);
+      c.fillStyle = p.color; c.fillRect(-8, -3, 16, 8);
+      c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(-8, -1, 16, 1); c.fillRect(-8, 2, 16, 1);
+      c.fillStyle = 'rgba(0,0,0,.12)'; c.fillRect(-8, -3, 16, 1);
+      c.restore();
+    } else if (p.type === 'skateRamp') {
+      c.fillStyle = 'rgba(8,6,16,.22)'; c.beginPath(); c.ellipse(p.x + 3, p.y + 2, 15, 4, 0, 0, TAU); c.fill();
+      c.fillStyle = '#7c7a84'; c.beginPath();
+      if (p.flip) { c.moveTo(p.x - 14, p.y); c.lineTo(p.x + 14, p.y); c.lineTo(p.x + 14, p.y - 12); c.closePath(); }
+      else { c.moveTo(p.x - 14, p.y); c.lineTo(p.x + 14, p.y); c.lineTo(p.x - 14, p.y - 12); c.closePath(); }
+      c.fill();
+      c.fillStyle = '#9b98a3'; c.fillRect(p.x - 14, p.y - 3, 28, 3);
+      c.strokeStyle = 'rgba(40,40,50,.4)'; c.lineWidth = 1;
+      for (let i = -10; i <= 10; i += 5) { c.beginPath(); c.moveTo(p.x + i, p.y - 1); c.lineTo(p.x + i, p.y - 5); c.stroke(); }
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 2, p.y - 13, 4, 2);
+    } else if (p.type === 'rail') {
+      const w = p.w || 40;
+      c.fillStyle = 'rgba(8,6,16,.2)'; c.fillRect(p.x - w / 2 + 2, p.y + 1, w, 3);
+      c.fillStyle = '#6b6f7c'; c.fillRect(p.x - w / 2, p.y - 8, 2, 8); c.fillRect(p.x + w / 2 - 2, p.y - 8, 2, 8);
+      c.fillStyle = '#b9bec7'; c.fillRect(p.x - w / 2, p.y - 9, w, 2);
+      c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(p.x - w / 2, p.y - 9, w, 1);
+    } else if (p.type === 'crane') {
+      c.fillStyle = 'rgba(8,6,16,.3)'; c.beginPath(); c.ellipse(p.x + 4, p.y + 2, 16, 5, 0, 0, TAU); c.fill();
+      // base
+      c.fillStyle = '#4a4a52'; c.fillRect(p.x - 9, p.y - 6, 18, 6);
+      c.fillStyle = '#5f5f68'; c.fillRect(p.x - 7, p.y - 8, 14, 2);
+      // mast
+      c.fillStyle = '#ffd166';
+      for (let i = 0; i < 78; i += 6) {
+        c.fillRect(p.x - 3, p.y - 8 - i, 6, 2);
+        c.fillRect(p.x - 3, p.y - 8 - i, 2, 6);
+      }
+      // jib
+      c.fillRect(p.x - 2, p.y - 86, 54, 3);
+      c.fillRect(p.x - 30, p.y - 86, 32, 3);
+      c.fillStyle = '#b98a2f'; c.fillRect(p.x - 2, p.y - 89, 54, 1);
+      // counterweight
+      c.fillStyle = '#3a3a42'; c.fillRect(p.x - 30, p.y - 92, 8, 8);
+      // cable + hook
+      c.strokeStyle = 'rgba(230,230,240,.55)'; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(p.x + 44, p.y - 83); c.lineTo(p.x + 44, p.y - 40); c.stroke();
+      c.fillStyle = '#ff8a2b'; c.fillRect(p.x + 42, p.y - 40, 5, 4);
+      c.fillStyle = '#ff3b3b'; c.fillRect(p.x - 3, p.y - 89, 2, 2);
+    } else if (p.type === 'driveScreen') {
+      c.fillStyle = 'rgba(8,6,16,.32)'; c.beginPath(); c.ellipse(p.x + 4, p.y + 2, 28, 6, 0, 0, TAU); c.fill();
+      c.fillStyle = '#2a2633'; c.fillRect(p.x - 26, p.y - 54, 52, 30);
+      c.fillStyle = '#101018'; c.fillRect(p.x - 24, p.y - 52, 48, 26);
+      // pixel art on screen
+      c.fillStyle = '#ff2d95'; c.fillRect(p.x - 18, p.y - 46, 12, 8);
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 4, p.y - 46, 8, 8);
+      c.fillStyle = '#24e0ff'; c.fillRect(p.x + 6, p.y - 46, 12, 8);
+      c.fillStyle = '#3b2a4a'; c.fillRect(p.x - 20, p.y - 36, 40, 6);
+      c.fillStyle = '#ff2d95'; c.fillRect(p.x - 20, p.y - 56, 40, 2);
+      c.strokeStyle = 'rgba(255,45,149,.55)'; c.lineWidth = 1; c.strokeRect(p.x - 26, p.y - 54, 52, 30);
+      c.fillStyle = '#4a4652'; c.fillRect(p.x - 20, p.y - 24, 3, 24); c.fillRect(p.x + 17, p.y - 24, 3, 24);
+      c.fillStyle = 'rgba(255,255,255,.10)'; c.fillRect(p.x - 24, p.y - 52, 48, 1);
+    } else if (p.type === 'lighthouse') {
+      c.fillStyle = 'rgba(8,6,16,.28)'; c.beginPath(); c.ellipse(p.x + 4, p.y + 2, 14, 5, 0, 0, TAU); c.fill();
+      // tower
+      c.fillStyle = '#f3f0e6'; c.beginPath();
+      c.moveTo(p.x - 7, p.y); c.lineTo(p.x - 4, p.y - 44); c.lineTo(p.x + 4, p.y - 44); c.lineTo(p.x + 7, p.y); c.closePath(); c.fill();
+      c.fillStyle = '#ff3b3b';
+      for (let i = 0; i < 3; i++) {
+        const yy = p.y - 8 - i * 12, hw = 7 - (i * 12 / 44) * 3;
+        c.fillRect(p.x - hw, yy, hw * 2, 5);
+      }
+      c.fillStyle = '#d8d1c2'; c.fillRect(p.x - 6, p.y - 46, 12, 3);
+      c.fillStyle = '#2a2633'; c.fillRect(p.x - 5, p.y - 55, 10, 9);
+      c.fillStyle = '#ffe6a3'; c.fillRect(p.x - 3, p.y - 53, 6, 5);
+      c.fillStyle = '#2a2633'; c.beginPath(); c.moveTo(p.x - 7, p.y - 55); c.lineTo(p.x, p.y - 60); c.lineTo(p.x + 7, p.y - 55); c.closePath(); c.fill();
+      c.fillStyle = '#ff3b3b'; c.fillRect(p.x - 1, p.y - 62, 2, 2);
+      // light beams
+      c.fillStyle = 'rgba(255,240,190,.10)';
+      c.beginPath(); c.moveTo(p.x, p.y - 50); c.lineTo(p.x - 30, p.y - 62); c.lineTo(p.x - 30, p.y - 44); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(p.x, p.y - 50); c.lineTo(p.x + 30, p.y - 62); c.lineTo(p.x + 30, p.y - 44); c.closePath(); c.fill();
+      c.fillStyle = '#4a4652'; c.fillRect(p.x - 5, p.y - 3, 10, 3);
+    } else if (p.type === 'canopy') {
+      const w = p.w || 80, h = p.h || 34;
+      c.fillStyle = 'rgba(8,6,16,.25)'; c.fillRect(p.x - w / 2 + 4, p.y + 3, w, h);
+      c.fillStyle = '#4a4652';
+      c.fillRect(p.x - w / 2 + 4, p.y - 6, 4, 8); c.fillRect(p.x + w / 2 - 8, p.y - 6, 4, 8);
+      c.fillStyle = '#f3f0e6'; c.fillRect(p.x - w / 2, p.y - 12, w, 8);
+      c.fillStyle = '#ff3b3b'; c.fillRect(p.x - w / 2, p.y - 12, w, 2);
+      c.fillStyle = 'rgba(0,0,0,.15)'; c.fillRect(p.x - w / 2, p.y - 4, w, 1);
+      c.fillStyle = '#4ade80'; c.fillRect(p.x - w / 2 + 2, p.y - 6, w - 4, 2);
+      c.fillStyle = 'rgba(255,255,255,.6)';
+      for (let i = 0; i < w; i += 12) c.fillRect(p.x - w / 2 + i, p.y - 10, 6, 1);
+    } else if (p.type === 'pump') {
+      c.fillStyle = 'rgba(8,6,16,.22)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 6, 2, 0, 0, TAU); c.fill();
+      c.fillStyle = '#d8d1c2'; c.fillRect(p.x - 4, p.y - 12, 8, 12);
+      c.fillStyle = '#4ade80'; c.fillRect(p.x - 4, p.y - 12, 8, 3);
+      c.fillStyle = '#1d2528'; c.fillRect(p.x - 2, p.y - 8, 4, 3);
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 2, p.y - 7, 3, 1);
+      c.strokeStyle = '#2a2633'; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(p.x + 4, p.y - 10); c.quadraticCurveTo(p.x + 8, p.y - 6, p.x + 6, p.y - 2); c.stroke();
+    } else if (p.type === 'radioTower') {
+      c.fillStyle = 'rgba(8,6,16,.28)'; c.beginPath(); c.ellipse(p.x + 3, p.y + 2, 15, 5, 0, 0, TAU); c.fill();
+      c.strokeStyle = '#b9bec7'; c.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        const hw = 12 - i * 2.5;
+        c.beginPath(); c.moveTo(p.x - hw, p.y - i * 20); c.lineTo(p.x + hw, p.y - i * 20); c.stroke();
+        c.beginPath(); c.moveTo(p.x - hw, p.y - i * 20); c.lineTo(p.x + hw - 4, p.y - (i + 1) * 20); c.stroke();
+        c.beginPath(); c.moveTo(p.x + hw, p.y - i * 20); c.lineTo(p.x - hw + 4, p.y - (i + 1) * 20); c.stroke();
+      }
+      c.beginPath(); c.moveTo(p.x - 2, p.y - 80); c.lineTo(p.x, p.y - 94); c.lineTo(p.x + 2, p.y - 80); c.stroke();
+      c.fillStyle = '#ff3b3b'; c.fillRect(p.x - 1, p.y - 96, 2, 2);
+      c.fillStyle = '#4a4652'; c.fillRect(p.x - 10, p.y - 2, 20, 2);
+    } else if (p.type === 'ferris') {
+      const R = 34;
+      c.fillStyle = 'rgba(8,6,16,.28)'; c.beginPath(); c.ellipse(p.x + 4, p.y + 2, 16, 5, 0, 0, TAU); c.fill();
+      // supports
+      c.strokeStyle = '#6b6f7c'; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(p.x - 12, p.y); c.lineTo(p.x, p.y - 36); c.lineTo(p.x + 12, p.y); c.stroke();
+      c.strokeStyle = 'rgba(36,224,255,.7)'; c.lineWidth = 2;
+      c.beginPath(); c.arc(p.x, p.y - 40, R, 0, TAU); c.stroke();
+      c.strokeStyle = 'rgba(255,45,149,.55)'; c.lineWidth = 1;
+      c.beginPath(); c.arc(p.x, p.y - 40, R - 4, 0, TAU); c.stroke();
+      // spokes
+      c.strokeStyle = 'rgba(220,225,240,.35)'; c.lineWidth = 1;
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * TAU;
+        c.beginPath(); c.moveTo(p.x, p.y - 40); c.lineTo(p.x + Math.cos(a) * R, p.y - 40 + Math.sin(a) * R); c.stroke();
+      }
+      // gondolas
+      const cols = ['#ff2d95', '#24e0ff', '#ffd166', '#4ade80', '#b98cff'];
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * TAU + .3;
+        const gx = p.x + Math.cos(a) * R, gy = p.y - 40 + Math.sin(a) * R;
+        c.fillStyle = cols[i % cols.length]; c.fillRect(gx - 2, gy + 1, 5, 4);
+        c.fillStyle = '#2a2633'; c.fillRect(gx - 1, gy, 3, 1);
+      }
+      c.fillStyle = '#ffe6a3'; c.fillRect(p.x - 2, p.y - 42, 4, 4);
+    } else if (p.type === 'floodlight') {
+      c.fillStyle = 'rgba(8,6,16,.25)'; c.beginPath(); c.ellipse(p.x + 2, p.y + 1, 5, 2, 0, 0, TAU); c.fill();
+      c.fillStyle = '#5b5b6a'; c.fillRect(p.x - 1, p.y - 34, 2, 34);
+      c.fillStyle = '#2a2633'; c.fillRect(p.x - 7, p.y - 38, 14, 6);
+      c.fillStyle = '#ffe6a3'; c.fillRect(p.x - 6, p.y - 37, 4, 3); c.fillRect(p.x + 2, p.y - 37, 4, 3);
+      c.fillStyle = '#ffd166'; c.fillRect(p.x - 1, p.y - 30, 2, 2);
+    } else if (p.type === 'net') {
+      const w = p.w || 50, h = p.h || 28;
+      c.fillStyle = 'rgba(8,6,16,.2)'; c.fillRect(p.x - w / 2 + 2, p.y + 1, w, 3);
+      c.fillStyle = '#6b6f7c'; c.fillRect(p.x - w / 2, p.y - 16, 2, 16); c.fillRect(p.x + w / 2 - 2, p.y - 16, 2, 16);
+      c.fillStyle = 'rgba(240,240,245,.55)'; c.fillRect(p.x - w / 2, p.y - 16, w, 1);
+      c.strokeStyle = 'rgba(240,240,245,.22)'; c.lineWidth = 1;
+      for (let i = -w / 2; i <= w / 2; i += 4) { c.beginPath(); c.moveTo(p.x + i, p.y - 15); c.lineTo(p.x + i, p.y - 6); c.stroke(); }
+      for (let i = 0; i < h; i += 4) { c.beginPath(); c.moveTo(p.x - w / 2, p.y - 15 + i); c.lineTo(p.x + w / 2, p.y - 15 + i); c.stroke(); }
     }
   }
 }
@@ -541,10 +1570,10 @@ function buildNightLayer() {
   c.textAlign = 'center'; c.textBaseline = 'middle';
   for (const s of signs) {
     c.save();
-    c.font = '7px PressStart, monospace';
+    c.font = '6px PressStart, monospace';
     c.fillStyle = s.color; c.shadowColor = s.color; c.shadowBlur = 10;
-    c.fillText(s.text, s.x, s.y + 1);
-    c.globalAlpha = .5; c.fillRect(s.x - 24, s.y + 5, 48, 1);
+    c.fillText(s.text, s.x, s.y - 3.5);
+    c.globalAlpha = .45; c.fillRect(s.x - 30, s.y - 8, 60, 1);
     c.restore();
   }
   for (const l of lights) {
@@ -554,6 +1583,30 @@ function buildNightLayer() {
     g.addColorStop(1, `rgba(${l.color},0)`);
     c.fillStyle = g; c.beginPath(); c.arc(l.x, l.y, l.r, 0, TAU); c.fill();
     c.fillStyle = 'rgba(255,240,200,.9)'; c.fillRect(l.x - 3, l.y - 4, 6, 3);
+  }
+  for (const g of glows) {
+    const gr = c.createRadialGradient(g.x, g.y, 2, g.x, g.y, g.r);
+    gr.addColorStop(0, `rgba(${g.color},${g.a})`);
+    gr.addColorStop(.5, `rgba(${g.color},${g.a * .35})`);
+    gr.addColorStop(1, `rgba(${g.color},0)`);
+    c.fillStyle = gr; c.beginPath(); c.arc(g.x, g.y, g.r, 0, TAU); c.fill();
+  }
+  // beach string lights
+  for (let y = 6 * T; y < 98 * T; y += 9 * T) {
+    for (let i = 0; i < 5; i++) {
+      const bx = (100.6 + i * .5) * T, by = y + Math.sin(i * 1.4) * 6;
+      c.fillStyle = 'rgba(255,232,168,.75)';
+      c.fillRect(bx, by, 2, 2);
+    }
+  }
+  // warm spill from shop fronts
+  for (const b of buildings) {
+    if (!b.name) continue;
+    const bx = (b.x + b.w / 2) * T, by = (b.y + b.h) * T;
+    const g = c.createRadialGradient(bx, by, 2, bx, by, 46);
+    g.addColorStop(0, 'rgba(255,209,120,.18)');
+    g.addColorStop(1, 'rgba(255,209,120,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(bx, by, 46, 0, TAU); c.fill();
   }
   c.save(); c.shadowBlur = 26; c.shadowColor = '#ff2d95';
   c.fillStyle = 'rgba(255,45,149,.35)'; c.fillRect(15 * T, 38 * T, 10 * T, 5);
@@ -586,13 +1639,19 @@ function buildMinimap() {
     c.fillStyle = '#ffd166';
     c.fillRect((m.x / T) * 2 - 2, (m.y / T) * 2 - 2, 4, 4);
   }
+  for (const p of pois) {
+    const mx = (p.x / T) * 2, my = (p.y / T) * 2;
+    c.fillStyle = '#0b0a12'; c.fillRect(mx - 3, my - 3, 6, 6);
+    c.fillStyle = p.color; c.fillRect(mx - 2, my - 2, 4, 4);
+    c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(mx - 2, my - 2, 2, 1);
+  }
 }
 
 function buildWorld() {
   generateWorld();
   const c = worldCanvas.getContext('2d');
   c.imageSmoothingEnabled = false;
-  drawGround(c); drawSpecials(c); drawBuildings(c); drawProps(c);
+  drawGround(c); drawSpecials(c); drawBuildings(c); drawSigns(c); drawProps(c);
   buildNightLayer(); buildMinimap();
 }
 
@@ -1068,7 +2127,9 @@ function spawnWorldEntities() {
       if (!canStand(x, y, 12)) continue;
       if (vehicles.some(v => dist2(v.x, v.y, x, y) < 34)) continue;
       if (dist2(x, y, landmarks.spawn.x, landmarks.spawn.y) < 60) continue;
-      makeCar(x, y, lot.dir ? Math.PI / 2 : 0, { parked: true, color: pick(CAR_COLORS) });
+      makeCar(x, y, lot.dir ? Math.PI / 2 : 0, lot.police
+        ? { parked: true, police: true, color: '#f3f0e6' }
+        : { parked: true, color: pick(CAR_COLORS) });
     }
   }
   // parked cars on the street
@@ -1212,6 +2273,14 @@ function fitCanvas() {
   if (ch > vh) { ch = vh; cw = vh * aspect; }
   canvas.style.width = Math.floor(cw) + 'px';
   canvas.style.height = Math.floor(ch) + 'px';
+  document.body.classList.toggle('portrait', vh > vw);
+}
+function updateRotateHint() {
+  const hint = $('#rotateHint');
+  if (!hint) return;
+  const ingame = game.mode === 'play' || game.mode === 'cutscene' || game.mode === 'phone' || game.mode === 'paused';
+  const show = document.body.classList.contains('touch') && document.body.classList.contains('portrait') && ingame;
+  hint.classList.toggle('hidden', !show);
 }
 window.addEventListener('resize', fitCanvas);
 window.addEventListener('orientationchange', () => setTimeout(fitCanvas, 120));
@@ -3214,14 +4283,18 @@ let lastHudAt = 0;
 
 function locationName() {
   const x = player.x, y = player.y;
+  let best = null, bd = 128;
+  for (const p of pois) {
+    const d = dist2(x, y, p.x, p.y);
+    if (d < bd) { bd = d; best = p; }
+  }
+  if (best) return best.name;
   if (x > 100 * T) return 'PRAIA DE VICE';
-  if (dist2(x, y, landmarks.club.x, landmarks.club.y) < 90) return 'NEON PALACE';
-  if (dist2(x, y, landmarks.garage.x, landmarks.garage.y) < 90) return 'GARAGEM';
-  if (dist2(x, y, landmarks.marina.x, landmarks.marina.y) < 90) return 'MARINA';
-  if (dist2(x, y, landmarks.helipad.x, landmarks.helipad.y) < 90) return 'HELIPONTO';
   if (y > 70 * T) return 'DOCKS';
   if (x < 30 * T) return 'MOTEL VICE';
-  return 'VICE CITY';
+  if (x < 50 * T) return y < 30 * T ? 'VICE NORTE' : y < 70 * T ? 'CENTRO' : 'SUNSET';
+  if (x < 70 * T) return y < 30 * T ? 'DOWNTOWN' : 'GALLERIA';
+  return y < 30 * T ? 'MIDTOWN' : y < 70 * T ? 'HELIPONTO' : 'PIER DISTRICT';
 }
 
 function updateHUD(force = false) {
@@ -3476,6 +4549,7 @@ function loop(now) {
     updateHUD();
     drawRadar();
   }
+  updateRotateHint();
   requestAnimationFrame(loop);
 }
 
