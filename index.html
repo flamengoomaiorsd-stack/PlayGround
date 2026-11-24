@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#07060d" />
+<link rel="icon" href="data:," />
+<title>GTA VI: Pixel Vice — Fan Game</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <canvas id="game" width="640" height="360" aria-label="GTA VI Pixel Vice"></canvas>
+  <div class="crt" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" class="hidden">
+    <div class="mission-card" id="missionCard">
+      <div class="mission-top"><span class="mission-tag" id="missionTag">MISSÃO 01</span><span class="mission-dot"></span></div>
+      <div class="mission-name" id="missionName">O ENCONTRO</div>
+      <div class="mission-obj" id="missionObj">Vá até o Neon Palace</div>
+      <div class="mission-dist"><span class="dist-arrow">◆</span> <span id="missionDist">-- m</span></div>
+    </div>
+
+    <div class="top-right">
+      <div class="clock-row">
+        <span id="clock">18:40</span>
+        <button class="hud-btn" id="btnMute" title="Som">♪</button>
+        <button class="hud-btn" id="btnPhoneTop" title="Celular">▤</button>
+        <button class="hud-btn" id="btnPauseTop" title="Pausar">Ⅱ</button>
+      </div>
+      <div class="wanted" id="wanted"><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+      <div class="cash" id="cash">$0</div>
+    </div>
+
+    <div class="bottom-left">
+      <div class="stat-row">
+        <span class="stat-label">VIDA</span>
+        <div class="stat-track"><div class="stat-fill health" id="healthFill"></div></div>
+        <span class="stat-num" id="healthNum">100</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">COLETE</span>
+        <div class="stat-track"><div class="stat-fill armor" id="armorFill"></div></div>
+        <span class="stat-num" id="armorNum">0</span>
+      </div>
+      <div class="car-health hidden" id="carHealthRow">
+        <span class="stat-label">CARRO</span>
+        <div class="stat-track"><div class="stat-fill car" id="carFill"></div></div>
+      </div>
+    </div>
+
+    <div class="bottom-right">
+      <div class="weapon-box">
+        <div class="weapon-icon" id="weaponIcon">▬</div>
+        <div class="weapon-meta">
+          <span id="weaponName">PISTOLA</span>
+          <span id="ammo">12 / 60</span>
+        </div>
+      </div>
+      <div class="radar-wrap">
+        <canvas id="radar" width="176" height="176"></canvas>
+        <div class="radar-label" id="radarLabel">VICE CITY</div>
+      </div>
+    </div>
+
+    <div class="speedo hidden" id="speedo">
+      <div class="speed-num"><span id="speedVal">0</span><small>KM/H</small></div>
+      <div class="speed-bar"><div id="speedFill"></div></div>
+    </div>
+
+    <div class="toasts" id="toasts"></div>
+    <div class="desktop-hint" id="desktopHint">
+      <b>WASD</b> mover · <b>E</b> carro · <b>MOUSE</b> mirar · <b>CLIQUE</b> atirar · <b>R</b> recarregar · <b>TAB</b> celular · <b>P</b> pausa
+    </div>
+  </div>
+
+  <!-- ================= MOBILE ================= -->
+  <div id="touch" class="hidden">
+    <div id="stick" class="stick"><div class="stick-ring"></div><div id="knob" class="knob"></div></div>
+    <div class="touch-actions">
+      <button id="btnSprint" class="tbtn small">CORRER</button>
+      <button id="btnCar" class="tbtn mid">CARRO</button>
+      <button id="btnFire" class="tbtn fire">FOGO</button>
+    </div>
+  </div>
+
+  <!-- ================= TITLE ================= -->
+  <div id="title" class="overlay title-screen">
+    <div class="title-bg-glow"></div>
+    <div class="title-inner">
+      <div class="eyebrow">UMA HOMENAGEM PIXEL NÃO OFICIAL</div>
+      <div class="logo-lockup">
+        <div class="star"><span>VI</span></div>
+        <div class="logo-text">
+          <h1>GTA<span>VI</span></h1>
+          <div class="subtitle">PIXEL VICE</div>
+        </div>
+      </div>
+      <div class="tagline">NEON · CRIME · CAOS</div>
+      <button id="startBtn" class="btn primary">INICIAR</button>
+      <div class="start-hint">ENTER / TOQUE PARA JOGAR</div>
+      <div class="title-cards">
+        <div class="tcard"><span>◆</span><b>MUNDO ABERTO</b><em>Explore Vice City</em></div>
+        <div class="tcard"><span>▰</span><b>DIREIJA & ATIRE</b><em>Roube carros, fuja da polícia</em></div>
+        <div class="tcard"><span>★</span><b>5 MISSÕES</b><em>Uma história de neon</em></div>
+      </div>
+      <div class="title-foot">
+        <span>WASD + MOUSE / TOQUE</span>
+        <span class="sep">|</span>
+        <span>FAN GAME · SEM AFILIAÇÃO COM ROCKSTAR GAMES</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= DIALOGUE ================= -->
+  <div id="dialogue" class="overlay dialogue-overlay hidden">
+    <div class="dialogue-box">
+      <canvas id="portrait" width="40" height="40"></canvas>
+      <div class="dialogue-body">
+        <div class="speaker" id="speakerName">LUNA</div>
+        <p id="dialogueText"></p>
+        <div class="continue" id="continueHint">ENTER / TOQUE ▸</div>
+      </div>
+    </div>
+    <button id="skipCutscene" class="skip-btn hidden">PULAR CENA ▸▸</button>
+  </div>
+
+  <!-- ================= PAUSE ================= -->
+  <div id="pause" class="overlay menu-overlay hidden">
+    <div class="menu-panel">
+      <div class="menu-eyebrow">JOGO PAUSADO</div>
+      <h2>VICE CITY<br><span>ESPERA</span></h2>
+      <div class="menu-stats">
+        <div><span>MISSÃO</span><b id="pauseMission">01 / 05</b></div>
+        <div><span>DINHEIRO</span><b id="pauseCash">$0</b></div>
+        <div><span>TEMPO</span><b id="pauseTime">00:00</b></div>
+      </div>
+      <button class="btn primary" id="resumeBtn">CONTINUAR</button>
+      <button class="btn" id="restartBtn">REINICIAR JOGO</button>
+      <button class="btn ghost" id="muteBtn2">SOM: LIGADO</button>
+      <div class="menu-tip">Dica: use o celular (TAB) para ver o mapa e as missões.</div>
+    </div>
+  </div>
+
+  <!-- ================= PHONE ================= -->
+  <div id="phone" class="overlay menu-overlay hidden">
+    <div class="phone-shell">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <div class="phone-status"><span id="phoneTime">18:40</span><span>▮▮▮ 5G</span></div>
+        <div class="phone-header">
+          <div class="phone-brand">VICE<span>PHONE</span></div>
+          <div class="phone-cash" id="phoneCash">$0</div>
+        </div>
+        <div class="phone-map-wrap"><canvas id="phoneMap" width="320" height="220"></canvas><div class="phone-map-tag">VICE CITY · MAPA</div></div>
+        <div class="phone-section">
+          <div class="phone-section-title">MISSÕES</div>
+          <div id="phoneMissions" class="phone-missions"></div>
+        </div>
+        <div class="phone-section">
+          <div class="phone-section-title">STATUS</div>
+          <div class="phone-grid">
+            <div><span>PROCURADO</span><b id="phoneWanted">—</b></div>
+            <div><span>VIDA</span><b id="phoneHealth">100</b></div>
+            <div><span>ARMA</span><b id="phoneWeapon">PISTOLA</b></div>
+            <div><span>VEÍCULO</span><b id="phoneCar">A PÉ</b></div>
+          </div>
+        </div>
+        <div class="phone-controls">WASD mover · E carro · CLIQUE atirar · R recarregar</div>
+        <button class="btn primary phone-close" id="phoneClose">FECHAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= WASTED ================= -->
+  <div id="wasted" class="overlay end-overlay hidden">
+    <div class="end-inner">
+      <div class="end-kicker">VICE CITY NÃO PERDOA</div>
+      <h2 class="wasted-title">VOCÊ MORREU</h2>
+      <p class="end-sub">A cidade engoliu mais um. Perdeu <b>$500</b> e acordou no motel.</p>
+      <div class="end-stats" id="wastedStats"></div>
+      <button class="btn primary" id="respawnBtn">TENTAR DE NOVO</button>
+      <button class="btn ghost" id="wastedRestart">REINICIAR JOGO</button>
+    </div>
+  </div>
+
+  <!-- ================= VICTORY ================= -->
+  <div id="victory" class="overlay end-overlay hidden">
+    <div class="end-inner">
+      <div class="end-kicker">MISSÕES CONCLUÍDAS</div>
+      <h2 class="victory-title">VICE É SUA</h2>
+      <p class="end-sub">Rico e Luna desapareceram no neon. A cidade vai lembrar.</p>
+      <div class="end-stats" id="victoryStats"></div>
+      <div class="victory-stars" id="victoryStars">★★★★★</div>
+      <button class="btn primary" id="replayBtn">JOGAR DE NOVO</button>
+      <button class="btn ghost" id="freeRoamBtn">CONTINUAR NO MODO LIVRE</button>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
