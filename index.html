@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#05070d" />
+    <meta name="description" content="Turbo Strike — futebol de carros em alta velocidade. Modo online, ranqueado, garagem com 16 carros e arena 3D." />
+    <title>TURBO STRIKE — Arena de Carros</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%23070b14' stroke='%2335f0ff' stroke-width='4'/%3E%3Cpath d='M18 38h28M22 28l6-10h14l6 10' fill='none' stroke='%23ff7a1a' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game" aria-label="Arena 3D do jogo"></canvas>
+      <div id="vignette"></div>
+      <div id="flash"></div>
+
+      <div id="hud" class="hidden" aria-live="polite">
+        <div class="hud-top">
+          <div class="scoreboard">
+            <div class="team-block blue">
+              <div class="team-badge">B</div>
+              <div class="team-meta"><span class="team-label">AZUL</span><span class="team-sub" id="blue-sub">VOCÊ</span></div>
+              <div class="score" id="score-blue">0</div>
+            </div>
+            <div class="clock-block">
+              <div class="clock" id="clock">3:00</div>
+              <div class="clock-sub" id="clock-sub">PARTIDA RANQUEADA</div>
+            </div>
+            <div class="team-block orange">
+              <div class="score" id="score-orange">0</div>
+              <div class="team-meta"><span class="team-label">LARANJA</span><span class="team-sub" id="orange-sub">RIVAL</span></div>
+              <div class="team-badge">L</div>
+            </div>
+          </div>
+          <button class="icon-btn hud-menu-btn" id="hud-menu" title="Menu (Esc)" aria-label="Menu">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="banner-wrap"><div class="banner" id="banner"></div></div>
+
+        <div class="hud-bottom">
+          <div class="speed-cluster">
+            <div class="speed-value"><span id="speed">0</span><small>KM/H</small></div>
+            <div class="speed-bar"><i id="speed-fill"></i></div>
+            <div class="supersonic" id="supersonic">SUPERSÔNICO</div>
+          </div>
+
+          <div class="boost-cluster">
+            <svg class="boost-ring" viewBox="0 0 120 120">
+              <circle class="boost-track" cx="60" cy="60" r="50"></circle>
+              <circle class="boost-fill" id="boost-fill" cx="60" cy="60" r="50"></circle>
+              <circle class="boost-inner" cx="60" cy="60" r="40"></circle>
+            </svg>
+            <div class="boost-label"><span id="boost-value">33</span><small>BOOST</small></div>
+            <div class="boost-pips" id="boost-pips"></div>
+          </div>
+        </div>
+
+        <div class="hint-bar" id="hint-bar">
+          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> dirigir</span>
+          <span><kbd>ESPAÇO</kbd> pular / flip</span>
+          <span><kbd>SHIFT</kbd> turbo</span>
+          <span><kbd>CTRL</kbd> drift</span>
+          <span><kbd>C</kbd> câmera</span>
+        </div>
+      </div>
+
+      <div id="touch-controls" class="hidden">
+        <div class="joy-zone" id="joy-zone">
+          <div class="joy-base"><div class="joy-stick" id="joy-stick"></div></div>
+        </div>
+        <div class="touch-actions">
+          <button class="touch-btn jump" id="tb-jump">SALTAR</button>
+          <button class="touch-btn boost" id="tb-boost">TURBO</button>
+          <button class="touch-btn drift" id="tb-drift">DRIFT</button>
+          <button class="touch-btn cam" id="tb-cam">CAM</button>
+          <button class="touch-btn menu" id="tb-menu">II</button>
+        </div>
+      </div>
+
+      <div id="screen-root"></div>
+      <div id="toast-root"></div>
+
+      <div id="loading">
+        <div class="load-mark">
+          <svg viewBox="0 0 100 100" width="74" height="74"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(53,240,255,.18)" stroke-width="6"/><circle cx="50" cy="50" r="42" fill="none" stroke="#35f0ff" stroke-width="6" stroke-linecap="round" stroke-dasharray="60 210" class="load-spin"/><path d="M28 60h44M34 46l9-16h20l9 16" fill="none" stroke="#ff7a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="load-title">TURBO STRIKE</div>
+        <div class="load-sub" id="loading-text">AQUECENDO OS MOTORES…</div>
+        <div class="load-track"><i id="load-fill"></i></div>
+      </div>
+
+      <div id="rotate-hint">
+        <div class="rotate-icon">⟳</div>
+        <span>Gire o dispositivo para uma melhor experiência</span>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
