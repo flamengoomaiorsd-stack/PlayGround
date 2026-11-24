@@ -35,6 +35,7 @@
       <button class="mc-btn" data-action="multiplayer" data-i18n="menu.multiplayer"></button>
       <button class="mc-btn" data-action="realms" data-i18n="menu.realms"></button>
       <button class="mc-btn" data-action="options" data-i18n="menu.options"></button>
+      <button class="mc-btn" data-action="store" data-i18n="menu.store"></button>
       <button class="mc-btn" data-action="quit" data-i18n="menu.quit"></button>
     </nav>
 
@@ -255,6 +256,62 @@
   </div>
 </section>
 
+<!-- ============================== STORE ============================== -->
+<section id="screen-store" class="screen subscreen" data-screen="store" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <h1 class="screen-title" data-i18n="store.title"></h1>
+  <div class="sub-body">
+    <div class="panel store-panel">
+      <div class="store-top">
+        <div class="store-balance"><span class="emerald-gem" aria-hidden="true"></span><span data-i18n="store.balance"></span><b id="store-balance">0</b></div>
+        <span class="store-rev" data-i18n="store.rev">Rev. 18.10</span>
+      </div>
+      <div class="store-tabs">
+        <button class="mc-btn store-tab" id="store-tab-maps" data-i18n="store.maps"></button>
+        <button class="mc-btn store-tab" id="store-tab-mods" data-i18n="store.mods"></button>
+      </div>
+      <div class="store-split">
+        <div id="store-list" class="scroll-list store-list" role="listbox" aria-label="Itens da loja"></div>
+        <aside class="store-detail">
+          <div class="store-detail-head">
+            <div id="store-detail-icon" class="store-detail-icon"></div>
+            <div class="store-detail-heading">
+              <div id="store-detail-name" class="store-detail-name">—</div>
+              <div id="store-detail-kind" class="store-detail-kind"></div>
+            </div>
+          </div>
+          <p id="store-detail-desc" class="store-detail-desc" data-i18n="store.select"></p>
+          <div id="store-detail-price" class="store-price"></div>
+          <button id="store-action" class="mc-btn action primary store-action"></button>
+          <div class="store-note" data-i18n="store.note"></div>
+          <div class="store-note dim" data-i18n="store.emeraldHint"></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <div class="sub-actions">
+    <button class="mc-btn action" data-action="mainmenu" data-i18n="common.back"></button>
+  </div>
+
+  <div id="age-gate" class="modal age-gate" hidden>
+    <div class="panel modal-panel age-panel">
+      <div class="age-head">
+        <div class="age-badge" aria-hidden="true">18+</div>
+        <div>
+          <h2 data-i18n="store.ageTitle"></h2>
+          <div class="age-rev" data-i18n="store.rev"></div>
+        </div>
+      </div>
+      <p class="age-text" data-i18n="store.ageText"></p>
+      <p class="age-note" data-i18n="store.ageNote"></p>
+      <div class="modal-actions">
+        <button class="mc-btn primary" id="age-confirm" data-i18n="store.ageConfirm"></button>
+        <button class="mc-btn" id="age-cancel" data-i18n="store.ageCancel"></button>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ============================== QUIT ============================== -->
 <section id="screen-quit" class="screen quit-screen" data-screen="quit" hidden>
   <div class="quit-inner">
@@ -294,6 +351,7 @@
   <div class="crosshair" aria-hidden="true"></div>
   <div id="debug-panel" class="debug-panel" hidden></div>
   <div id="block-label" class="block-label"></div>
+  <div id="emerald-hud" class="emerald-hud" title="Esmeraldas"><span class="emerald-gem" aria-hidden="true"></span><b id="emerald-count">0</b></div>
   <div id="hotbar" class="hotbar" aria-label="Barra de blocos"></div>
   <div id="touch-controls" class="touch-controls" hidden>
     <div id="joystick" class="joystick"><div id="joystick-knob" class="joystick-knob"></div></div>

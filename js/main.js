@@ -17,7 +17,8 @@ const LS = {
   options: 'mcplayground.options.v1',
   worlds: 'mcplayground.worlds.v1',
   lang: 'mcplayground.lang.v1',
-  servers: 'mcplayground.servers.v1'
+  servers: 'mcplayground.servers.v1',
+  store: 'mcplayground.store.v1'
 };
 
 const DEFAULT_OPTIONS = {
@@ -32,6 +33,35 @@ const DEFAULT_OPTIONS = {
   reduceMotion: false,
   bigText: false
 };
+
+const STORE_ITEMS = [
+  { id: 'map_zombie_island', kind: 'map', price: 25, hue: 112, seed: 'ilha-dos-zumbis', mode: 'survival', name: 'store.map.zombieIsland' },
+  { id: 'map_abandoned_mine', kind: 'map', price: 45, hue: 28, seed: 'mina-abandonada', mode: 'survival', name: 'store.map.abandonedMine' },
+  { id: 'map_twilight_village', kind: 'map', price: 70, hue: 268, seed: 'vila-do-crepusculo', mode: 'creative', name: 'store.map.twilightVillage' },
+  { id: 'map_end_city', kind: 'map', price: 95, hue: 190, seed: 'cidade-do-fim', mode: 'creative', name: 'store.map.endCity' },
+  { id: 'mod_zombie_arm', kind: 'mod', price: 0, hue: 110, name: 'store.mod.zombieArm' },
+  { id: 'mod_rabbit_boots', kind: 'mod', price: 15, hue: 36, name: 'store.mod.rabbitBoots' },
+  { id: 'mod_slime_jump', kind: 'mod', price: 15, hue: 148, name: 'store.mod.slimeJump' },
+  { id: 'mod_night_vision', kind: 'mod', price: 25, hue: 84, name: 'store.mod.nightVision' },
+  { id: 'mod_long_reach', kind: 'mod', price: 35, hue: 205, name: 'store.mod.longReach' }
+];
+
+const DEFAULT_STORE = {
+  authorized: false,
+  emeralds: 120,
+  owned: ['mod_zombie_arm'],
+  equipped: ['mod_zombie_arm']
+};
+
+function readStore() {
+  const raw = readJSON(LS.store, null);
+  const store = { ...DEFAULT_STORE, ...(raw && typeof raw === 'object' ? raw : {}) };
+  store.emeralds = clamp(Number(store.emeralds) || 0, 0, 9999);
+  store.owned = Array.isArray(store.owned) ? store.owned.filter(id => STORE_ITEMS.some(i => i.id === id)) : [...DEFAULT_STORE.owned];
+  store.equipped = Array.isArray(store.equipped) ? store.equipped.filter(id => store.owned.includes(id)) : [];
+  if (!store.owned.includes('mod_zombie_arm')) store.owned.push('mod_zombie_arm');
+  return store;
+}
 
 function readJSON(key, fallback) {
   try {
@@ -60,6 +90,9 @@ const state = {
   options: { ...DEFAULT_OPTIONS, ...readJSON(LS.options, {}) },
   worlds: readJSON(LS.worlds, null),
   customServers: readJSON(LS.servers, []),
+  store: readStore(),
+  storeTab: 'map',
+  storeSelectedId: null,
   servers: [],
   selectedWorldId: null,
   selectedServerId: 'playground',
@@ -186,6 +219,10 @@ function showScreen(name) {
   for (const [key, el] of screens) el.hidden = key !== name;
   state.currentScreen = name || 'game';
   document.body.dataset.screen = state.currentScreen;
+  if (name !== 'store') {
+    const gate = $('#age-gate');
+    if (gate) gate.hidden = true;
+  }
   if (name !== 'mainmenu') viewer?.setPointer(0, 0);
 }
 
@@ -254,6 +291,26 @@ function buildScreens() {
   $('#opt-fullscreen').addEventListener('click', toggleFullscreen);
   document.addEventListener('fullscreenchange', syncOptionsUI);
 
+  $('#store-tab-maps').addEventListener('click', () => {
+    state.storeTab = 'map';
+    state.storeSelectedId = null;
+    renderStore();
+    audio.click();
+  });
+  $('#store-tab-mods').addEventListener('click', () => {
+    state.storeTab = 'mod';
+    state.storeSelectedId = null;
+    renderStore();
+    audio.click();
+  });
+  $('#store-action').addEventListener('click', storeAction);
+  $('#age-confirm').addEventListener('click', authorizeStore);
+  $('#age-cancel').addEventListener('click', () => {
+    const gate = $('#age-gate');
+    if (gate) gate.hidden = true;
+    showScreen('mainmenu');
+  });
+
   $$('[data-access]').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.access;
@@ -312,7 +369,9 @@ function applyLanguage() {
   syncOptionsUI();
   renderWorlds();
   renderServers();
+  renderStore();
   renderLanguage();
+  updateEmeraldHud();
   updateCreateToggles();
   updateDeleteButton();
   if (game) {
@@ -569,7 +628,8 @@ async function startWorld(meta) {
   }
   await enterGame({
     ...meta,
-    serverName: null
+    serverName: null,
+    mods: enabledMods()
   });
 }
 
@@ -656,7 +716,8 @@ function joinSelectedServer() {
     mode: s.mode,
     cheats: true,
     edits: {},
-    serverName: s.name
+    serverName: s.name,
+    mods: enabledMods()
   });
 }
 
@@ -699,6 +760,280 @@ function addServer() {
   closeModal();
   renderServers();
   toast(tUI('toast.serverAdded'), 'plain');
+}
+
+/* ============================================================
+   Store
+   ============================================================ */
+const storeIconCache = new Map();
+
+function storeIconURL(item) {
+  if (storeIconCache.has(item.id)) return storeIconCache.get(item.id);
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const g = c.getContext('2d');
+  const hue = item.hue ?? 200;
+  const grd = g.createLinearGradient(0, 0, 64, 64);
+  grd.addColorStop(0, `hsl(${hue}, 48%, 42%)`);
+  grd.addColorStop(1, `hsl(${hue + 26}, 46%, 15%)`);
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 64, 64);
+  g.fillStyle = 'rgba(0,0,0,.2)';
+  for (let y = 0; y < 64; y += 8) g.fillRect(0, y, 64, 1);
+  for (let x = 0; x < 64; x += 8) g.fillRect(x, 0, 1, 64);
+
+  if (item.kind === 'map') {
+    g.fillStyle = 'rgba(0,0,0,.35)';
+    g.fillRect(14, 16, 38, 36);
+    g.fillStyle = '#d9c9a3';
+    g.fillRect(11, 13, 38, 36);
+    g.fillStyle = `hsl(${hue}, 42%, 44%)`;
+    g.fillRect(15, 17, 30, 26);
+    g.fillStyle = 'rgba(160,220,255,.55)';
+    g.fillRect(15, 27, 30, 3);
+    g.fillStyle = '#7a4b2a';
+    for (let i = 0; i < 4; i++) g.fillRect(18 + i * 7, 34 - i * 3, 3, 3);
+    g.strokeStyle = '#b83a3a';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.moveTo(36, 33); g.lineTo(43, 40);
+    g.moveTo(43, 33); g.lineTo(36, 40);
+    g.stroke();
+    g.strokeStyle = 'rgba(40,30,16,.85)';
+    g.lineWidth = 2;
+    g.strokeRect(11, 13, 38, 36);
+    g.fillStyle = 'rgba(0,0,0,.3)';
+    g.fillRect(11, 47, 38, 3);
+  } else {
+    g.fillStyle = '#ececec';
+    g.fillRect(26, 17, 12, 30);
+    g.fillRect(17, 26, 30, 12);
+    g.fillStyle = `hsl(${hue}, 62%, 46%)`;
+    g.fillRect(28, 28, 8, 8);
+    g.fillStyle = 'rgba(0,0,0,.3)';
+    g.fillRect(17, 43, 30, 4);
+  }
+
+  g.fillStyle = 'rgba(0,0,0,.35)';
+  g.fillRect(0, 58, 64, 6);
+  const url = c.toDataURL('image/png');
+  storeIconCache.set(item.id, url);
+  return url;
+}
+
+function storeItem(id) {
+  return STORE_ITEMS.find(i => i.id === id) || null;
+}
+
+function storeKindLabel(kind) {
+  return tUI(kind === 'map' ? 'store.maps' : 'store.mods');
+}
+
+function openStore() {
+  if (state.inGame) return;
+  renderStore();
+  showScreen('store');
+  const gate = $('#age-gate');
+  if (gate) gate.hidden = !!state.store.authorized;
+  if (!state.store.authorized) setTimeout(() => $('#age-confirm')?.focus(), 60);
+}
+
+function authorizeStore() {
+  state.store.authorized = true;
+  saveStore();
+  const gate = $('#age-gate');
+  if (gate) gate.hidden = true;
+  renderStore();
+  toast(tUI('store.authorized'), 'plain');
+}
+
+function saveStore() {
+  writeJSON(LS.store, state.store);
+}
+
+function selectStoreItem(id) {
+  state.storeSelectedId = id;
+  renderStore();
+  audio.click();
+}
+
+function renderStore() {
+  if (!state.store) return;
+  const tab = state.storeTab === 'mod' ? 'mod' : 'map';
+  const items = STORE_ITEMS.filter(i => i.kind === tab);
+  if (!items.some(i => i.id === state.storeSelectedId)) {
+    state.storeSelectedId = items[0]?.id ?? null;
+  }
+
+  $('#store-tab-maps')?.classList.toggle('active', tab === 'map');
+  $('#store-tab-mods')?.classList.toggle('active', tab === 'mod');
+  const balance = $('#store-balance');
+  if (balance) balance.textContent = String(state.store.emeralds);
+
+  const list = $('#store-list');
+  if (list) {
+    list.innerHTML = '';
+    for (const item of items) {
+      const owned = state.store.owned.includes(item.id);
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'store-item' + (owned ? ' owned' : '') + (item.id === state.storeSelectedId ? ' selected' : '');
+      row.dataset.id = item.id;
+
+      const icon = document.createElement('div');
+      icon.className = 'store-item-icon';
+      icon.style.backgroundImage = `url("${storeIconURL(item)}")`;
+
+      const main = document.createElement('div');
+      main.className = 'store-item-main';
+      const name = document.createElement('div');
+      name.className = 'store-item-name';
+      name.textContent = tUI(item.name);
+      const sub = document.createElement('div');
+      sub.className = 'store-item-sub';
+      sub.textContent = storeKindLabel(item.kind);
+      main.append(name, sub);
+
+      const price = document.createElement('div');
+      price.className = 'store-item-price';
+      price.textContent = owned
+        ? tUI('store.owned')
+        : item.price === 0 ? tUI('store.free') : `◈ ${item.price}`;
+
+      row.append(icon, main, price);
+      row.addEventListener('click', () => selectStoreItem(item.id));
+      list.appendChild(row);
+    }
+  }
+
+  const item = storeItem(state.storeSelectedId);
+  const action = $('#store-action');
+  const detailIcon = $('#store-detail-icon');
+  const detailName = $('#store-detail-name');
+  const detailKind = $('#store-detail-kind');
+  const detailDesc = $('#store-detail-desc');
+  const detailPrice = $('#store-detail-price');
+
+  if (!item) {
+    if (detailIcon) detailIcon.style.backgroundImage = '';
+    if (detailName) detailName.textContent = '—';
+    if (detailKind) detailKind.textContent = '';
+    if (detailDesc) detailDesc.textContent = tUI('store.select');
+    if (detailPrice) { detailPrice.textContent = ''; detailPrice.classList.remove('insufficient'); }
+    if (action) { action.textContent = '—'; action.disabled = true; }
+    return;
+  }
+
+  const owned = state.store.owned.includes(item.id);
+  const equipped = state.store.equipped.includes(item.id);
+  if (detailIcon) detailIcon.style.backgroundImage = `url("${storeIconURL(item)}")`;
+  if (detailName) detailName.textContent = tUI(item.name);
+  if (detailKind) detailKind.textContent = storeKindLabel(item.kind);
+  if (detailDesc) detailDesc.textContent = tUI(item.name + '.desc');
+
+  if (detailPrice) {
+    detailPrice.classList.toggle('insufficient', !owned && state.store.emeralds < item.price);
+    if (owned) {
+      detailPrice.textContent = item.kind === 'map' ? tUI('store.owned') : tUI(equipped ? 'store.equipped' : 'store.equip');
+    } else {
+      detailPrice.textContent = item.price === 0 ? tUI('store.free') : `◈ ${item.price} / ${state.store.emeralds}`;
+    }
+  }
+
+  if (action) {
+    action.disabled = false;
+    if (!owned) {
+      action.textContent = item.kind === 'map' ? tUI('store.install') : tUI('store.buy');
+      action.disabled = state.store.emeralds < item.price;
+    } else if (item.kind === 'map') {
+      action.textContent = tUI('store.reinstall');
+    } else {
+      action.textContent = tUI(equipped ? 'store.equipped' : 'store.equip');
+    }
+  }
+}
+
+function storeAction() {
+  const item = storeItem(state.storeSelectedId);
+  if (!item) return;
+  const owned = state.store.owned.includes(item.id);
+
+  if (!owned) {
+    if (state.store.emeralds < item.price) {
+      toast(tUI('store.notEnough'), 'error');
+      return;
+    }
+    state.store.emeralds -= item.price;
+    state.store.owned.push(item.id);
+    if (item.kind === 'map') installStoreMap(item);
+    else {
+      state.store.equipped.push(item.id);
+      toast(tUI('store.modOn', { s: tUI(item.name) }), 'plain');
+    }
+    audio.achievement();
+  } else if (item.kind === 'map') {
+    installStoreMap(item);
+  } else {
+    const at = state.store.equipped.indexOf(item.id);
+    if (at >= 0) {
+      state.store.equipped.splice(at, 1);
+      toast(tUI('store.modOff', { s: tUI(item.name) }), 'plain');
+    } else {
+      state.store.equipped.push(item.id);
+      toast(tUI('store.modOn', { s: tUI(item.name) }), 'plain');
+    }
+    audio.click();
+  }
+
+  saveStore();
+  renderStore();
+  updateEmeraldHud();
+}
+
+function installStoreMap(item) {
+  const name = tUI(item.name);
+  const meta = {
+    id: 'w_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    name,
+    seed: item.seed,
+    mode: item.mode,
+    cheats: true,
+    lastPlayed: Date.now(),
+    edits: {},
+    storeItem: item.id
+  };
+  state.worlds.unshift(meta);
+  state.selectedWorldId = meta.id;
+  saveWorlds();
+  renderWorlds();
+  toast(tUI('store.mapAdded', { s: name }), 'plain');
+}
+
+function enabledMods() {
+  const eq = new Set(state.store.equipped);
+  return {
+    zombieArm: eq.has('mod_zombie_arm'),
+    rabbitBoots: eq.has('mod_rabbit_boots'),
+    slimeJump: eq.has('mod_slime_jump'),
+    nightVision: eq.has('mod_night_vision'),
+    longReach: eq.has('mod_long_reach')
+  };
+}
+
+function addEmeralds(n) {
+  const before = state.store.emeralds;
+  state.store.emeralds = clamp(state.store.emeralds + n, 0, 9999);
+  if (state.store.emeralds === before) return;
+  saveStore();
+  updateEmeraldHud();
+}
+
+function updateEmeraldHud() {
+  const count = state.store.emeralds;
+  const hudEl = $('#emerald-count');
+  if (hudEl) hudEl.textContent = String(count);
+  const storeEl = $('#store-balance');
+  if (storeEl) storeEl.textContent = String(count);
 }
 
 /* ============================================================
@@ -825,6 +1160,9 @@ function handleAction(action) {
     case 'options':
       openOptionsFrom(game ? 'pause' : 'mainmenu');
       break;
+    case 'store':
+      openStore();
+      break;
     case 'pause-options':
       openOptionsFrom('pause');
       break;
@@ -858,7 +1196,8 @@ function handleAction(action) {
     case 'join-realm':
       enterGame({
         id: null, name: 'Playground Realm', seed: 'realm-playground',
-        mode: 'creative', cheats: true, edits: {}, serverName: 'Playground Realm'
+        mode: 'creative', cheats: true, edits: {}, serverName: 'Playground Realm',
+        mods: enabledMods()
       });
       break;
     case 'resume':
@@ -902,6 +1241,10 @@ function onGlobalKeyDown(e) {
   if (e.code === 'Escape') {
     const modal = $('#server-modal');
     if (modal && !modal.hidden) { closeModal(); return; }
+    if (state.currentScreen === 'store') {
+      const gate = $('#age-gate');
+      if (gate && !gate.hidden) { gate.hidden = true; showScreen('mainmenu'); return; }
+    }
     if (state.currentScreen === 'pause') { resumeGame(); return; }
     if (state.currentScreen === 'options' && state.optionsReturn === 'pause') { showScreen('pause'); return; }
     if (state.currentScreen === 'controls' && game) { showScreen('pause'); return; }
@@ -996,6 +1339,7 @@ async function enterGame(meta) {
     state.inGame = true;
     state.loading = false;
     state.currentWorldMeta = meta;
+    updateEmeraldHud();
     if (meta.id) {
       const stored = state.worlds.find(w => w.id === meta.id);
       if (stored) stored.lastPlayed = Date.now();
@@ -1031,6 +1375,7 @@ function makeAppApi() {
     clearPause,
     showAdvancement,
     recordEdit,
+    addEmeralds,
     toast
   };
 }
