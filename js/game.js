@@ -1,7 +1,13 @@
 import * as THREE from '../vendor/three.module.js';
 import { BLOCKS, TILE, IS_SOLID, IS_PLANT, tileDataURL } from './world.js';
+import { characterPalette } from './characters.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const ZOMBIE_SKIN = ['#7d9a58', '#739050', '#88a562', '#698647', '#93b06e', '#5f7c40'];
+const ZOMBIE_SLEEVE = ['#2f5d74', '#2a5368', '#376a83', '#25495c'];
+const DEFAULT_SKIN = ['#c69a76', '#bd906c', '#cca27f', '#b98b66', '#d0a883'];
+const DEFAULT_SLEEVE = ['#3e6fa8', '#39679c', '#4579b3', '#335d8f'];
 
 function pixelTexture(canvas) {
   const tex = new THREE.CanvasTexture(canvas);
@@ -12,13 +18,10 @@ function pixelTexture(canvas) {
   return tex;
 }
 
-function armCanvas(zombie) {
+function armCanvas(palette, zombie) {
   const c = document.createElement('canvas');
   c.width = 64; c.height = 64;
   const g = c.getContext('2d');
-  const palette = zombie
-    ? ['#7d9a58', '#739050', '#88a562', '#698647', '#93b06e', '#5f7c40']
-    : ['#c69a76', '#bd906c', '#cca27f', '#b98b66', '#d0a883'];
   for (let y = 0; y < 64; y += 4) {
     for (let x = 0; x < 64; x += 4) {
       g.fillStyle = palette[(Math.random() * palette.length) | 0];
@@ -43,13 +46,10 @@ function armCanvas(zombie) {
   return c;
 }
 
-function sleeveCanvas(zombie) {
+function sleeveCanvas(palette, zombie) {
   const c = document.createElement('canvas');
   c.width = 32; c.height = 32;
   const g = c.getContext('2d');
-  const palette = zombie
-    ? ['#2f5d74', '#2a5368', '#376a83', '#25495c']
-    : ['#3e6fa8', '#39679c', '#4579b3', '#335d8f'];
   for (let y = 0; y < 32; y += 4) {
     for (let x = 0; x < 32; x += 4) {
       g.fillStyle = palette[(Math.random() * palette.length) | 0];
@@ -107,9 +107,22 @@ export class Game {
     this.lang = app.lang;
     this.mods = { ...(worldMeta.mods || {}) };
     this.reach = this.mods.longReach ? 9 : 6;
+    this.character = characterPalette(this.mods.character);
     this.swingPhase = 1;
     this.handTime = 0;
     this.handBase = { x: 0.52, y: -0.42, z: -0.52, rx: 0.24, ry: 0.62, rz: 0.34 };
+
+    // day / night cycle
+    this.dayLength = 240;
+    this.dayTime = 0.2;
+    this.isNight = false;
+    this.nightAnnounced = false;
+    this.dawnAnnounced = false;
+
+    // night mobs
+    this.zombies = [];
+    this.zombieSpawnTimer = 0;
+    this.maxZombies = 7;
 
     this.canvas = viewer.canvas;
     this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -137,7 +150,11 @@ export class Game {
       bob: 0,
       inWater: false,
       stepAccum: 0,
-      lastSpace: 0
+      lastSpace: 0,
+      health: 20,
+      maxHealth: 20,
+      hurtTimer: 0,
+      regenTimer: 0
     };
 
     const S = world.size;
@@ -166,7 +183,11 @@ export class Game {
       debug: document.getElementById('debug-panel'),
       fpsNote: document.getElementById('fps-note'),
       joystick: document.getElementById('joystick'),
-      knob: document.getElementById('joystick-knob')
+      knob: document.getElementById('joystick-knob'),
+      timeHud: document.getElementById('time-hud'),
+      timeIcon: document.getElementById('time-icon'),
+      timeLabel: document.getElementById('time-label'),
+      healthHud: document.getElementById('health-hud')
     };
 
     this.joystick = { x: 0, y: 0, active: false, id: null };
@@ -174,8 +195,11 @@ export class Game {
 
     this.setupScene();
     this.buildHud();
+    this.buildHealthHud();
+    this.setupZombies();
     this.bind();
     this.updateCamera(0);
+    this.updateDayNight(0, true);
     this.showHud();
   }
 
@@ -204,12 +228,18 @@ export class Game {
     this.particleGroup = new THREE.Group();
     this.viewer.scene.add(this.particleGroup);
 
+    this.sceneSun = new THREE.DirectionalLight(0xfff2d8, 0.5);
+    this.sceneSun.position.set(0.6, 1, 0.45);
+    this.viewer.scene.add(this.sceneSun);
+
     document.body.classList.toggle('night-vision', !!this.mods.nightVision);
     this.buildHand();
   }
 
   buildHand() {
-    const zombie = this.mods.zombieArm !== false;
+    const zombie = !this.character && this.mods.zombieArm !== false;
+    const skinPalette = this.character ? this.character.skin : zombie ? ZOMBIE_SKIN : DEFAULT_SKIN;
+    const sleevePalette = this.character ? this.character.sleeve : zombie ? ZOMBIE_SLEEVE : DEFAULT_SLEEVE;
     this.viewer.scene.add(this.viewer.camera);
 
     this.armGroup = new THREE.Group();
@@ -222,10 +252,10 @@ export class Game {
     this.viewer.camera.add(this.handLights);
 
     const skinMat = new THREE.MeshLambertMaterial({
-      map: pixelTexture(armCanvas(zombie)), fog: false, depthTest: false, depthWrite: false
+      map: pixelTexture(armCanvas(skinPalette, zombie)), fog: false, depthTest: false, depthWrite: false
     });
     const sleeveMat = new THREE.MeshLambertMaterial({
-      map: pixelTexture(sleeveCanvas(zombie)), fog: false, depthTest: false, depthWrite: false
+      map: pixelTexture(sleeveCanvas(sleevePalette, zombie)), fog: false, depthTest: false, depthWrite: false
     });
     this.handMaterials.push(skinMat, sleeveMat);
 
@@ -236,6 +266,17 @@ export class Game {
     sleeve.position.set(0, 0, -0.09);
 
     const meshes = [armMesh, sleeve];
+
+    if (this.character) {
+      const accentMat = new THREE.MeshLambertMaterial({
+        color: new THREE.Color(this.character.accent), fog: false, depthTest: false, depthWrite: false
+      });
+      this.handMaterials.push(accentMat);
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.242, 0.242, 0.06), accentMat);
+      band.position.set(0, 0, -0.5);
+      meshes.push(band);
+    }
+
     meshes.forEach((mesh, i) => {
       mesh.renderOrder = 30 + i;
       mesh.frustumCulled = false;
@@ -354,6 +395,324 @@ export class Game {
     this.dom.label.classList.add('show');
     clearTimeout(this.labelTimer);
     this.labelTimer = setTimeout(() => this.dom.label.classList.remove('show'), 1500);
+  }
+
+  /* ---------------- day / night + health ---------------- */
+  updateDayNight(dt, force = false) {
+    if (dt > 0) this.dayTime = (this.dayTime + dt / this.dayLength) % 1;
+    this.viewer.setDayCycle(this.dayTime);
+    const sunHeight = Math.sin(this.dayTime * Math.PI * 2);
+    const night = sunHeight < -0.05;
+    if (night !== this.isNight || force) {
+      this.isNight = night;
+      document.body.classList.toggle('night', night);
+      this.updateTimeHud();
+    }
+    if (this.isNight && !this.nightAnnounced) {
+      this.nightAnnounced = true;
+      this.dawnAnnounced = false;
+      this.app.toast?.(this.t('game.nightFell'), 'plain');
+    } else if (!this.isNight && this.nightAnnounced) {
+      this.nightAnnounced = false;
+      if (!this.dawnAnnounced) {
+        this.dawnAnnounced = true;
+        this.app.toast?.(this.t('game.dawn'), 'plain');
+      }
+    }
+  }
+
+  updateTimeHud() {
+    const { timeHud, timeIcon, timeLabel } = this.dom;
+    if (timeHud) timeHud.classList.toggle('night', this.isNight);
+    if (timeIcon) timeIcon.textContent = this.isNight ? '☾' : '☀';
+    if (timeLabel) timeLabel.textContent = this.t(this.isNight ? 'game.night' : 'game.day');
+  }
+
+  buildHealthHud() {
+    const hud = this.dom.healthHud;
+    if (!hud) return;
+    hud.innerHTML = '';
+    this.heartEls = [];
+    for (let i = 0; i < 10; i++) {
+      const heart = document.createElement('span');
+      heart.className = 'heart';
+      heart.textContent = '♥';
+      hud.appendChild(heart);
+      this.heartEls.push(heart);
+    }
+    this.updateHealthHud();
+  }
+
+  updateHealthHud() {
+    if (!this.heartEls) return;
+    const full = Math.ceil(this.player.health / 2);
+    this.heartEls.forEach((el, i) => el.classList.toggle('empty', i >= full));
+  }
+
+  updateHealth(dt) {
+    const p = this.player;
+    if (p.hurtTimer > 0) p.hurtTimer -= dt;
+    if (this.hurtFlash > 0) {
+      this.hurtFlash -= dt;
+      if (this.hurtFlash <= 0) document.body.classList.remove('hurt');
+    }
+    if (p.regenTimer > 0) {
+      p.regenTimer -= dt;
+    } else if (p.health < p.maxHealth) {
+      p.regenTimer = 4;
+      p.health = Math.min(p.maxHealth, p.health + 2);
+      this.updateHealthHud();
+    }
+  }
+
+  damagePlayer(amount, source) {
+    const p = this.player;
+    if (this.destroyed || p.hurtTimer > 0.35) return;
+    p.health = Math.max(0, p.health - amount);
+    p.hurtTimer = 1.0;
+    p.regenTimer = 6;
+    this.hurtFlash = 0.4;
+    document.body.classList.add('hurt');
+    this.app.audio?.hurt?.();
+    if (source) {
+      const dx = p.pos.x - source.x, dz = p.pos.z - source.z;
+      const len = Math.hypot(dx, dz) || 1;
+      p.vel.x += (dx / len) * 6.5;
+      p.vel.z += (dz / len) * 6.5;
+      p.vel.y = Math.max(p.vel.y, 3.5);
+    }
+    this.updateHealthHud();
+    if (p.health <= 0) this.respawnPlayer();
+  }
+
+  respawnPlayer() {
+    const p = this.player;
+    const sp = this.world.spawn;
+    p.pos.set(sp.x, sp.y + 1.5, sp.z);
+    p.vel.set(0, 0, 0);
+    p.health = p.maxHealth;
+    p.hurtTimer = 1.2;
+    p.regenTimer = 0;
+    this.hurtFlash = 0;
+    document.body.classList.remove('hurt');
+    for (let i = this.zombies.length - 1; i >= 0; i--) {
+      const z = this.zombies[i];
+      if (z.pos.distanceTo(p.pos) < 16) {
+        this.removeZombie(z, false);
+        this.zombies.splice(i, 1);
+      }
+    }
+    this.updateHealthHud();
+    this.app.toast?.(this.t('game.respawn'), 'error');
+    this.app.audio?.respawn?.();
+  }
+
+  /* ---------------- night mobs ---------------- */
+  setupZombies() {
+    this.zombieGroup = new THREE.Group();
+    this.viewer.scene.add(this.zombieGroup);
+    this.zombieMats = {
+      skin: new THREE.MeshLambertMaterial({ color: 0x6f9450 }),
+      shirt: new THREE.MeshLambertMaterial({ color: 0x2f5d74 }),
+      pants: new THREE.MeshLambertMaterial({ color: 0x2b3d1d }),
+      eye: new THREE.MeshBasicMaterial({ color: 0x141414 })
+    };
+    this.zombieGeos = {
+      head: new THREE.BoxGeometry(0.5, 0.5, 0.5),
+      body: new THREE.BoxGeometry(0.56, 0.72, 0.3),
+      arm: new THREE.BoxGeometry(0.18, 0.18, 0.62),
+      leg: new THREE.BoxGeometry(0.22, 0.72, 0.22),
+      eye: new THREE.BoxGeometry(0.09, 0.06, 0.02)
+    };
+  }
+
+  createZombie(x, y, z) {
+    const group = new THREE.Group();
+    const legs = [];
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(this.zombieGeos.leg, this.zombieMats.pants);
+      leg.position.set(0.14 * side, 0.36, 0);
+      group.add(leg);
+      legs.push(leg);
+    }
+    const body = new THREE.Mesh(this.zombieGeos.body, this.zombieMats.shirt);
+    body.position.set(0, 1.08, 0);
+    group.add(body);
+    const head = new THREE.Mesh(this.zombieGeos.head, this.zombieMats.skin);
+    head.position.set(0, 1.69, 0);
+    group.add(head);
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(this.zombieGeos.eye, this.zombieMats.eye);
+      eye.position.set(0.12 * side, 1.74, 0.252);
+      group.add(eye);
+    }
+    const arms = [];
+    for (const side of [-1, 1]) {
+      const arm = new THREE.Mesh(this.zombieGeos.arm, this.zombieMats.skin);
+      arm.position.set(0.37 * side, 1.3, 0.31);
+      arm.rotation.x = -0.12;
+      group.add(arm);
+      arms.push(arm);
+    }
+    group.position.set(x, y, z);
+    this.zombieGroup.add(group);
+    const zombie = {
+      group,
+      parts: { legs, arms },
+      pos: new THREE.Vector3(x, y, z),
+      walk: Math.random() * 10,
+      attackCd: 0,
+      wanderAngle: Math.random() * Math.PI * 2,
+      wanderTimer: 0,
+      hp: 8
+    };
+    this.zombies.push(zombie);
+    return zombie;
+  }
+
+  spawnZombieNear() {
+    const p = this.player.pos;
+    const S = this.world.size;
+    for (let tries = 0; tries < 24; tries++) {
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 10 + Math.random() * 14;
+      const x = Math.floor(p.x + Math.cos(ang) * dist);
+      const z = Math.floor(p.z + Math.sin(ang) * dist);
+      if (x < 3 || z < 3 || x >= S - 3 || z >= S - 3) continue;
+      const h = this.world.surfaceY(x, z);
+      if (h <= 8 || h >= this.world.height - 3) continue;
+      const top = this.world.getBlock(x, h, z);
+      if (top !== BLOCKS.GRASS && top !== BLOCKS.SAND && top !== BLOCKS.STONE && top !== BLOCKS.SNOW) continue;
+      if (this.world.getBlock(x, h + 1, z) !== BLOCKS.AIR) continue;
+      if (this.world.getBlock(x, h + 2, z) !== BLOCKS.AIR) continue;
+      return this.createZombie(x + 0.5, h + 1.02, z + 0.5);
+    }
+    return null;
+  }
+
+  removeZombie(zombie, burned) {
+    if (!zombie || !zombie.group) return;
+    this.zombieGroup.remove(zombie.group);
+    if (burned) {
+      this.spawnParticles(
+        Math.floor(zombie.pos.x),
+        Math.floor(zombie.pos.y + 0.6),
+        Math.floor(zombie.pos.z),
+        BLOCKS.LEAVES
+      );
+    }
+  }
+
+  updateZombies(dt) {
+    const p = this.player;
+    if (!this.isNight) {
+      if (this.zombies.length) {
+        for (const zombie of this.zombies) this.removeZombie(zombie, true);
+        this.zombies.length = 0;
+      }
+      return;
+    }
+
+    this.zombieSpawnTimer -= dt;
+    if (this.zombies.length < this.maxZombies && this.zombieSpawnTimer <= 0) {
+      this.spawnZombieNear();
+      this.zombieSpawnTimer = 2.2 + Math.random() * 2.6;
+    }
+
+    for (let i = this.zombies.length - 1; i >= 0; i--) {
+      const zombie = this.zombies[i];
+      const dx = p.pos.x - zombie.pos.x;
+      const dz = p.pos.z - zombie.pos.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 52 || zombie.pos.y < -4) {
+        this.removeZombie(zombie, false);
+        this.zombies.splice(i, 1);
+        continue;
+      }
+
+      let mx, mz;
+      if (dist < 22 && dist > 0.01) {
+        mx = dx / dist; mz = dz / dist;
+      } else {
+        zombie.wanderTimer -= dt;
+        if (zombie.wanderTimer <= 0) {
+          zombie.wanderAngle = Math.random() * Math.PI * 2;
+          zombie.wanderTimer = 2 + Math.random() * 3;
+        }
+        mx = Math.cos(zombie.wanderAngle);
+        mz = Math.sin(zombie.wanderAngle);
+      }
+
+      const speed = dist < 22 ? 1.55 : 0.8;
+      const nx = zombie.pos.x + mx * speed * dt;
+      const nz = zombie.pos.z + mz * speed * dt;
+      const nh = this.world.surfaceY(Math.floor(nx), Math.floor(nz));
+      if (nh > 7 && nh < this.world.height - 2 && Math.abs(nh - (zombie.pos.y - 1)) <= 1.2) {
+        zombie.pos.x = nx;
+        zombie.pos.z = nz;
+        zombie.pos.y = nh + 1.02;
+      } else {
+        zombie.wanderAngle += Math.PI * 0.5;
+      }
+      zombie.group.position.copy(zombie.pos);
+      zombie.group.rotation.y = Math.atan2(mx, mz);
+
+      zombie.walk += dt * (dist < 22 ? 6.2 : 3.4);
+      const swing = Math.sin(zombie.walk) * 0.55;
+      zombie.parts.legs[0].rotation.x = swing;
+      zombie.parts.legs[1].rotation.x = -swing;
+      zombie.parts.arms[0].rotation.x = -0.12 + Math.sin(zombie.walk * 0.5) * 0.12;
+      zombie.parts.arms[1].rotation.x = -0.12 - Math.sin(zombie.walk * 0.5) * 0.12;
+
+      zombie.attackCd -= dt;
+      if (dist < 1.15 && Math.abs(zombie.pos.y - p.pos.y) < 1.6 && zombie.attackCd <= 0) {
+        zombie.attackCd = 1.15;
+        this.damagePlayer(2, zombie.pos);
+      }
+    }
+  }
+
+  tryHitZombie() {
+    if (!this.zombies.length) return false;
+    const p = this.player;
+    const origin = new THREE.Vector3(p.pos.x, p.pos.y + this.eyeHeight(), p.pos.z);
+    const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(p.pitch, p.yaw, 0, 'YXZ'));
+    let best = null;
+    let bestT = Infinity;
+    for (const zombie of this.zombies) {
+      const cx = zombie.pos.x, cy = zombie.pos.y + 1.0, cz = zombie.pos.z;
+      const vx = cx - origin.x, vy = cy - origin.y, vz = cz - origin.z;
+      const t = vx * dir.x + vy * dir.y + vz * dir.z;
+      if (t < 0 || t > this.reach + 1.2) continue;
+      const px = origin.x + dir.x * t, py = origin.y + dir.y * t, pz = origin.z + dir.z * t;
+      const d2 = (cx - px) ** 2 + (cy - py) ** 2 + (cz - pz) ** 2;
+      if (d2 < 0.9 && t < bestT) { bestT = t; best = zombie; }
+    }
+    if (!best) return false;
+
+    this.swingHand();
+    best.hp -= 4;
+    const kb = new THREE.Vector3(best.pos.x - p.pos.x, 0, best.pos.z - p.pos.z);
+    if (kb.lengthSq() > 0.0001) kb.normalize().multiplyScalar(2.2);
+    best.pos.x += kb.x;
+    best.pos.z += kb.z;
+    best.group.position.copy(best.pos);
+    this.app.audio?.hit?.();
+    this.spawnParticles(
+      Math.floor(best.pos.x),
+      Math.floor(best.pos.y + 1),
+      Math.floor(best.pos.z),
+      BLOCKS.LEAVES
+    );
+
+    if (best.hp <= 0) {
+      const idx = this.zombies.indexOf(best);
+      if (idx >= 0) this.zombies.splice(idx, 1);
+      this.removeZombie(best, true);
+      this.app.addEmeralds?.(2);
+      this.app.toast?.(this.t('game.zombieKill'), 'plain');
+    }
+    return true;
   }
 
   /* ---------------- input ---------------- */

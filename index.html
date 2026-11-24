@@ -20,6 +20,7 @@
 
 <canvas id="scene" aria-hidden="true"></canvas>
 <div id="vignette" aria-hidden="true"></div>
+<div id="night-tint" aria-hidden="true"></div>
 
 <!-- ============================== MAIN MENU ============================== -->
 <main id="screen-mainmenu" class="screen screen-mainmenu" data-screen="mainmenu">
@@ -268,6 +269,7 @@
       </div>
       <div class="store-tabs">
         <button class="mc-btn store-tab" id="store-tab-maps" data-i18n="store.maps"></button>
+        <button class="mc-btn store-tab" id="store-tab-chars" data-i18n="store.characters"></button>
         <button class="mc-btn store-tab" id="store-tab-mods" data-i18n="store.mods"></button>
       </div>
       <div class="store-split">
@@ -352,6 +354,12 @@
   <div id="debug-panel" class="debug-panel" hidden></div>
   <div id="block-label" class="block-label"></div>
   <div id="emerald-hud" class="emerald-hud" title="Esmeraldas"><span class="emerald-gem" aria-hidden="true"></span><b id="emerald-count">0</b></div>
+  <div id="time-hud" class="time-hud" title="Ciclo dia/noite"><span id="time-icon" aria-hidden="true">☀</span><b id="time-label">Dia</b></div>
+  <div id="character-hud" class="character-hud" hidden>
+    <span id="character-hud-icon" class="character-hud-icon" aria-hidden="true"></span>
+    <b id="character-hud-name"></b>
+  </div>
+  <div id="health-hud" class="health-hud" aria-label="Vida"></div>
   <div id="hotbar" class="hotbar" aria-label="Barra de blocos"></div>
   <div id="touch-controls" class="touch-controls" hidden>
     <div id="joystick" class="joystick"><div id="joystick-knob" class="joystick-knob"></div></div>

@@ -3,6 +3,19 @@ import { WATER_LEVEL } from './world.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+const SKY_DAY_TOP = new THREE.Color(0x4f97d6);
+const SKY_DAY_HORIZON = new THREE.Color(0xcfe7f4);
+const SKY_DUSK_TOP = new THREE.Color(0x2a355f);
+const SKY_DUSK_HORIZON = new THREE.Color(0xe8863c);
+const SKY_NIGHT_TOP = new THREE.Color(0x070d22);
+const SKY_NIGHT_HORIZON = new THREE.Color(0x16213e);
+const SUN_DAY = new THREE.Color(0xfff4c4);
+const SUN_DUSK = new THREE.Color(0xffa94d);
+const CLOUD_DAY = new THREE.Color(0xffffff);
+const CLOUD_NIGHT = new THREE.Color(0x3a4560);
+const OCEAN_DAY = new THREE.Color(0x3f83bd);
+const OCEAN_NIGHT = new THREE.Color(0x14243f);
+
 export class Viewer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -25,9 +38,18 @@ export class Viewer {
     this.time = 0;
     this.parallax = { x: 0, y: 0, tx: 0, ty: 0 };
     this.cameraPos = new THREE.Vector3();
+    this.dayFogColor = new THREE.Color(0xc9dfef);
+    this.dayClearColor = new THREE.Color(0x9cc7e6);
+    this._cTop = new THREE.Color();
+    this._cHorizon = new THREE.Color();
+    this._cSun = new THREE.Color();
+    this._cFog = new THREE.Color();
+    this._cCloud = new THREE.Color();
+    this._moonDir = new THREE.Vector3();
 
     this.buildSky();
     this.buildSun();
+    this.buildMoon();
     this.buildClouds();
     this.buildOcean();
     this.resize();
@@ -74,6 +96,7 @@ export class Viewer {
     this.sky.frustumCulled = false;
     this.sky.renderOrder = -10;
     this.scene.add(this.sky);
+    this.skyUniforms = uniforms;
     this.sunDir = uniforms.sunDir.value;
   }
 
@@ -90,6 +113,22 @@ export class Viewer {
     this.sun.frustumCulled = false;
     this.sun.renderOrder = -9;
     this.scene.add(this.sun);
+  }
+
+  buildMoon() {
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xdfe8ff,
+      transparent: true,
+      opacity: 0.92,
+      depthWrite: false,
+      fog: false,
+      side: THREE.DoubleSide
+    });
+    this.moon = new THREE.Mesh(new THREE.CircleGeometry(11, 24), mat);
+    this.moon.frustumCulled = false;
+    this.moon.renderOrder = -9;
+    this.moon.visible = false;
+    this.scene.add(this.moon);
   }
 
   buildClouds() {
@@ -122,6 +161,51 @@ export class Viewer {
   }
 
   setCloudsVisible(v) { this.clouds.visible = !!v; }
+
+  /* ---- day / night cycle ---- */
+  setDayCycle(dayTime) {
+    const angle = (((dayTime % 1) + 1) % 1) * Math.PI * 2;
+    const sunHeight = Math.sin(angle);
+    const day = clamp((sunHeight + 0.08) / 0.46, 0, 1);
+    const night = clamp((-sunHeight + 0.05) / 0.40, 0, 1);
+
+    this.sunDir.set(Math.cos(angle) * 0.82, sunHeight, -0.55).normalize();
+
+    const top = this._cTop.copy(SKY_DUSK_TOP).lerp(SKY_DAY_TOP, day).lerp(SKY_NIGHT_TOP, night);
+    const horizon = this._cHorizon.copy(SKY_DUSK_HORIZON).lerp(SKY_DAY_HORIZON, day).lerp(SKY_NIGHT_HORIZON, night);
+    this.skyUniforms.topColor.value.copy(top);
+    this.skyUniforms.horizonColor.value.copy(horizon);
+    const sun = this._cSun.copy(SUN_DUSK).lerp(SUN_DAY, day).multiplyScalar(1 - night * 0.95);
+    this.skyUniforms.sunColor.value.copy(sun);
+
+    this.dayFogColor.copy(horizon).lerp(SKY_NIGHT_TOP, night * 0.35);
+    this.dayClearColor.copy(horizon).lerp(top, 0.35);
+    this.scene.fog.color.copy(this.dayFogColor);
+    this.renderer.setClearColor(this.dayClearColor, 1);
+
+    if (this.sun) this.sun.visible = sunHeight > -0.06;
+    if (this.moon) this.moon.visible = sunHeight < 0.06;
+    if (this.cloudMat) {
+      this.cloudMat.opacity = 0.82 - night * 0.55;
+      this.cloudMat.color.copy(CLOUD_DAY).lerp(CLOUD_NIGHT, night);
+    }
+    if (this.ocean) this.ocean.material.color.copy(OCEAN_DAY).lerp(OCEAN_NIGHT, night);
+  }
+
+  resetSky() {
+    this.setDayCycle(0.22);
+    if (this.sun) this.sun.visible = true;
+    if (this.moon) this.moon.visible = false;
+    if (this.cloudMat) {
+      this.cloudMat.opacity = 0.82;
+      this.cloudMat.color.setHex(0xffffff);
+    }
+    if (this.ocean) this.ocean.material.color.setHex(0x3f83bd);
+    this.dayFogColor.setHex(0xc9dfef);
+    this.dayClearColor.setHex(0x9cc7e6);
+    this.scene.fog.color.setHex(0xc9dfef);
+    this.renderer.setClearColor(0x9cc7e6, 1);
+  }
 
   buildOcean() {
     const mat = new THREE.MeshBasicMaterial({ color: 0x3f83bd, fog: true });
@@ -218,6 +302,11 @@ export class Viewer {
     if (this.sun) {
       this.sun.position.copy(this.camera.position).addScaledVector(this.sunDir, 430);
       this.sun.lookAt(this.camera.position);
+    }
+    if (this.moon && this.moon.visible) {
+      this._moonDir.copy(this.sunDir).multiplyScalar(-1);
+      this.moon.position.copy(this.camera.position).addScaledVector(this._moonDir, 430);
+      this.moon.lookAt(this.camera.position);
     }
     if (this.clouds && this.clouds.visible) {
       for (const c of this.clouds.children) {

@@ -589,10 +589,11 @@ export class VoxelWorld {
       }
     }
 
-    // trees
+    // trees (scale with the map area so larger worlds stay forested)
+    const treeTarget = Math.round((S * S) / 120);
     const rnd = mulberry32(this.seed ^ 0x9e3779b9);
     let attempts = 0;
-    while (this.trees.length < 105 && attempts < 5000) {
+    while (this.trees.length < treeTarget && attempts < treeTarget * 48) {
       attempts++;
       const x = 3 + Math.floor(rnd() * (S - 6));
       const z = 3 + Math.floor(rnd() * (S - 6));
@@ -645,8 +646,9 @@ export class VoxelWorld {
   findSpawn() {
     const S = this.size;
     const cx = Math.floor(S * 0.5), cz = Math.floor(S * 0.5);
+    const maxR = Math.max(34, Math.floor(S * 0.32));
     let best = null;
-    for (let r = 0; r <= 34 && !best; r += 2) {
+    for (let r = 0; r <= maxR && !best; r += 2) {
       for (let a = 0; a < 24; a++) {
         const ang = (a / 24) * Math.PI * 2;
         const x = Math.round(cx + Math.cos(ang) * r);
