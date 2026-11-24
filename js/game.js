@@ -3,6 +3,74 @@ import { BLOCKS, TILE, IS_SOLID, IS_PLANT, tileDataURL } from './world.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+function pixelTexture(canvas) {
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function armCanvas(zombie) {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const g = c.getContext('2d');
+  const palette = zombie
+    ? ['#7d9a58', '#739050', '#88a562', '#698647', '#93b06e', '#5f7c40']
+    : ['#c69a76', '#bd906c', '#cca27f', '#b98b66', '#d0a883'];
+  for (let y = 0; y < 64; y += 4) {
+    for (let x = 0; x < 64; x += 4) {
+      g.fillStyle = palette[(Math.random() * palette.length) | 0];
+      g.fillRect(x, y, 4, 4);
+    }
+  }
+  if (zombie) {
+    for (let i = 0; i < 10; i++) {
+      const x = (Math.random() * 56) | 0;
+      const y = (Math.random() * 56) | 0;
+      g.fillStyle = 'rgba(28,48,16,.72)';
+      g.fillRect(x, y, 4, 4);
+    }
+  }
+  g.fillStyle = zombie ? 'rgba(18,32,10,.55)' : 'rgba(90,60,40,.35)';
+  g.fillRect(0, 44, 64, 3);
+  g.fillStyle = zombie ? '#c7d5ae' : '#e6c8aa';
+  for (let x = 4; x < 64; x += 12) g.fillRect(x, 43, 5, 2);
+  g.strokeStyle = 'rgba(22,32,14,.72)';
+  g.lineWidth = 3;
+  g.strokeRect(1.5, 1.5, 61, 61);
+  return c;
+}
+
+function sleeveCanvas(zombie) {
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 32;
+  const g = c.getContext('2d');
+  const palette = zombie
+    ? ['#2f5d74', '#2a5368', '#376a83', '#25495c']
+    : ['#3e6fa8', '#39679c', '#4579b3', '#335d8f'];
+  for (let y = 0; y < 32; y += 4) {
+    for (let x = 0; x < 32; x += 4) {
+      g.fillStyle = palette[(Math.random() * palette.length) | 0];
+      g.fillRect(x, y, 4, 4);
+    }
+  }
+  if (zombie) {
+    g.fillStyle = 'rgba(10,20,26,.8)';
+    for (let x = 0; x < 32; x += 8) {
+      g.fillRect(x, 26, 4, 6);
+      g.fillRect(x + 3, 23, 3, 4);
+    }
+  }
+  g.strokeStyle = 'rgba(10,18,26,.75)';
+  g.lineWidth = 2;
+  g.strokeRect(1, 1, 30, 30);
+  return c;
+}
+
+
+
 const BLOCK_COLORS = {
   [BLOCKS.GRASS]: 0x6aa84f,
   [BLOCKS.DIRT]: 0x8a6142,
@@ -37,6 +105,11 @@ export class Game {
     this.worldMeta = worldMeta;
     this.t = t;
     this.lang = app.lang;
+    this.mods = { ...(worldMeta.mods || {}) };
+    this.reach = this.mods.longReach ? 9 : 6;
+    this.swingPhase = 1;
+    this.handTime = 0;
+    this.handBase = { x: 0.52, y: -0.42, z: -0.52, rx: 0.24, ry: 0.62, rz: 0.34 };
 
     this.canvas = viewer.canvas;
     this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -130,6 +203,81 @@ export class Game {
     this.particleMats = new Map();
     this.particleGroup = new THREE.Group();
     this.viewer.scene.add(this.particleGroup);
+
+    document.body.classList.toggle('night-vision', !!this.mods.nightVision);
+    this.buildHand();
+  }
+
+  buildHand() {
+    const zombie = this.mods.zombieArm !== false;
+    this.viewer.scene.add(this.viewer.camera);
+
+    this.armGroup = new THREE.Group();
+    this.handMaterials = [];
+    this.handLights = new THREE.Group();
+    const ambient = new THREE.AmbientLight(0xffffff, 0.82);
+    const keyLight = new THREE.PointLight(0xfff4de, 0.9, 4.5, 2);
+    keyLight.position.set(0.8, 1.1, -0.5);
+    this.handLights.add(ambient, keyLight);
+    this.viewer.camera.add(this.handLights);
+
+    const skinMat = new THREE.MeshLambertMaterial({
+      map: pixelTexture(armCanvas(zombie)), fog: false, depthTest: false, depthWrite: false
+    });
+    const sleeveMat = new THREE.MeshLambertMaterial({
+      map: pixelTexture(sleeveCanvas(zombie)), fog: false, depthTest: false, depthWrite: false
+    });
+    this.handMaterials.push(skinMat, sleeveMat);
+
+    const armMesh = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.23, 0.54), skinMat);
+    armMesh.position.set(0, 0, -0.27);
+
+    const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.268, 0.268, 0.2), sleeveMat);
+    sleeve.position.set(0, 0, -0.09);
+
+    const meshes = [armMesh, sleeve];
+    meshes.forEach((mesh, i) => {
+      mesh.renderOrder = 30 + i;
+      mesh.frustumCulled = false;
+      this.armGroup.add(mesh);
+    });
+
+    this.armGroup.scale.setScalar(0.74);
+    const b = this.handBase;
+    this.armGroup.position.set(b.x, b.y, b.z);
+    this.armGroup.rotation.set(b.rx, b.ry, b.rz);
+    this.viewer.camera.add(this.armGroup);
+  }
+
+  swingHand() {
+    this.swingPhase = 0;
+  }
+
+  updateHand(dt) {
+    if (!this.armGroup) return;
+    this.handTime += dt;
+    const p = this.player;
+    const aspect = this.viewer.camera.aspect || 1;
+    const narrow = clamp(aspect / 1.33, 0.34, 1);
+    const hspeed = Math.hypot(p.vel.x, p.vel.z);
+    const walk = p.onGround && !p.fly ? clamp(hspeed / 4.15, 0, 1) : 0;
+    this.swingPhase = Math.min(1, this.swingPhase + dt * 3.8);
+    const s = this.swingPhase < 1 ? Math.sin(this.swingPhase * Math.PI) : 0;
+    const idle = Math.sin(this.handTime * 1.7) * 0.006;
+    const bobX = Math.sin(p.bob * 2.4) * 0.014 * walk;
+    const bobY = Math.abs(Math.cos(p.bob * 2.4)) * 0.016 * walk;
+    const b = this.handBase;
+    this.armGroup.scale.setScalar(0.74 * clamp(narrow, 0.72, 1));
+    this.armGroup.position.set(
+      0.5 * narrow + bobX - s * 0.05,
+      b.y - bobY + idle + s * 0.02,
+      b.z + s * 0.16
+    );
+    this.armGroup.rotation.set(
+      b.rx - s * 0.72,
+      0.62 * clamp(narrow, 0.5, 1) + s * 0.16,
+      b.rz + s * 0.22
+    );
   }
 
   showHud() {
@@ -477,7 +625,8 @@ export class Game {
     if (Math.hypot(ix, iz) > 1) { const l = Math.hypot(ix, iz); ix /= l; iz /= l; }
 
     const sprinting = !p.fly && (keys.has('ShiftLeft') || keys.has('ShiftRight')) && iz > 0;
-    const speed = p.fly ? 10.5 : p.inWater ? 3.2 : sprinting ? 5.9 : 4.15;
+    const speedBoost = this.mods.rabbitBoots ? 1.4 : 1;
+    const speed = (p.fly ? 10.5 : p.inWater ? 3.2 : sprinting ? 5.9 : 4.15) * speedBoost;
     const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
     const dirX = -sin * iz + cos * ix;
     const dirZ = -cos * iz - sin * ix;
@@ -501,7 +650,7 @@ export class Game {
       p.vel.z *= 0.995;
     } else {
       p.vel.y -= 28 * dt;
-      if (jump && p.onGround) { p.vel.y = 8.4; p.onGround = false; }
+      if (jump && p.onGround) { p.vel.y = 8.4 * (this.mods.slimeJump ? 1.3 : 1); p.onGround = false; }
       if (p.vel.y < -40) p.vel.y = -40;
     }
 
@@ -615,6 +764,7 @@ export class Game {
       }
     }
     this.updateCamera(dt);
+    this.updateHand(dt);
     if (!this.paused && (this.isTouch || this.locked)) {
       if (this.debug) this.updateDebug();
       if (this.isTouch) this.dom.fpsNote.textContent = '';
@@ -622,7 +772,7 @@ export class Game {
   }
 
   updateHighlight() {
-    const hit = this.raycast(6);
+    const hit = this.raycast(this.reach);
     if (hit) {
       this.highlight.visible = true;
       this.highlight.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
@@ -717,7 +867,8 @@ export class Game {
 
   breakBlock() {
     if (this.paused) return;
-    const hit = this.raycast(6);
+    this.swingHand();
+    const hit = this.raycast(this.reach);
     if (!hit) return;
     if (hit.block === BLOCKS.BEDROCK) return;
     this.world.setBlock(hit.x, hit.y, hit.z, BLOCKS.AIR);
@@ -728,6 +879,7 @@ export class Game {
     this.spawnParticles(hit.x, hit.y, hit.z, hit.block);
     this.app.audio?.breakBlock(hit.block);
     this.app.recordEdit?.(hit.x, hit.y, hit.z, BLOCKS.AIR);
+    this.app.addEmeralds?.(1);
     this.stats.broken++;
     if (!this.stats.firstBreak && !IS_PLANT(hit.block)) {
       this.stats.firstBreak = true;
@@ -737,7 +889,8 @@ export class Game {
 
   placeBlock() {
     if (this.paused) return;
-    const hit = this.raycast(6);
+    this.swingHand();
+    const hit = this.raycast(this.reach);
     if (!hit) return;
     const tx = hit.x + hit.normal[0];
     const ty = hit.y + hit.normal[1];
@@ -816,7 +969,24 @@ export class Game {
     for (const m of this.particleMats.values()) m.dispose();
     this.particles = [];
 
-    document.body.classList.remove('underwater');
+    if (this.handLights) {
+      this.viewer.camera.remove(this.handLights);
+      this.handLights = null;
+    }
+    if (this.armGroup) {
+      this.viewer.camera.remove(this.armGroup);
+      for (const mesh of this.armGroup.children) {
+        mesh.geometry.dispose();
+      }
+      for (const mat of this.handMaterials) {
+        if (mat.map) mat.map.dispose();
+        mat.dispose();
+      }
+      this.handMaterials = [];
+      this.armGroup = null;
+    }
+
+    document.body.classList.remove('underwater', 'night-vision');
     this.dom.hud.hidden = true;
     this.dom.hint.hidden = true;
     this.dom.touch.hidden = true;
