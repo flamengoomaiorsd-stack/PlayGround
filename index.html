@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#6b4f2b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%236aa84f'/%3E%3Crect y='8' width='16' height='8' fill='%238a6142'/%3E%3C/svg%3E">
+<title>Minecraft Java Edition</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="boot" class="boot">
+  <div class="boot-block" aria-hidden="true">
+    <div class="boot-face top"></div><div class="boot-face left"></div><div class="boot-face right"></div>
+  </div>
+  <div class="boot-text">MINECRAFT</div>
+  <div class="boot-sub">Carregando panorama…</div>
+</div>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div id="vignette" aria-hidden="true"></div>
+
+<!-- ============================== MAIN MENU ============================== -->
+<main id="screen-mainmenu" class="screen screen-mainmenu" data-screen="mainmenu">
+  <div class="main-wrap">
+    <div class="logo-wrap">
+      <canvas id="logo" class="logo" width="1400" height="400" aria-label="Minecraft"></canvas>
+      <div class="logo-edition">JAVA EDITION</div>
+      <div id="splash" class="splash" aria-hidden="true">100% livre de Herobrine!</div>
+    </div>
+
+    <nav class="button-column" aria-label="Menu principal">
+      <button class="mc-btn" data-action="singleplayer" data-i18n="menu.singleplayer"></button>
+      <button class="mc-btn" data-action="multiplayer" data-i18n="menu.multiplayer"></button>
+      <button class="mc-btn" data-action="realms" data-i18n="menu.realms"></button>
+      <button class="mc-btn" data-action="options" data-i18n="menu.options"></button>
+      <button class="mc-btn" data-action="quit" data-i18n="menu.quit"></button>
+    </nav>
+
+    <div class="small-buttons">
+      <button class="mc-btn mc-btn-small" data-action="language" data-i18n="menu.language"></button>
+      <button class="mc-btn mc-btn-small" data-action="accessibility" data-i18n="menu.accessibility"></button>
+      <button class="mc-btn mc-btn-small" data-action="music" id="music-btn">
+        <span class="music-glyph" aria-hidden="true">♪</span>
+        <span data-role="music-label" data-i18n="menu.music"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="corner corner-left">
+    <span class="ver">Minecraft 1.21.4</span><span class="dim">(Playground)</span>
+  </div>
+  <div class="corner corner-right" data-i18n="menu.copyright"></div>
+</main>
+
+<!-- ============================== SINGLEPLAYER ============================== -->
+<section id="screen-singleplayer" class="screen subscreen" data-screen="singleplayer" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <h1 class="screen-title" data-i18n="sp.title"></h1>
+  <div class="sub-body split">
+    <div class="panel world-panel">
+      <div class="search-row">
+        <span class="search-icon" aria-hidden="true"></span>
+        <input id="world-search" class="mc-input" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="sp.search" placeholder="Pesquisar mundos...">
+      </div>
+      <div id="world-list" class="scroll-list world-list" role="listbox" aria-label="Mundos"></div>
+      <div id="world-empty" class="empty-note" data-i18n="sp.empty" hidden></div>
+    </div>
+    <aside class="panel world-summary">
+      <div class="summary-head">
+        <div id="summary-icon" class="summary-icon"></div>
+        <div>
+          <div id="summary-name" class="summary-name">—</div>
+          <div id="summary-mode" class="summary-sub"></div>
+        </div>
+      </div>
+      <div class="summary-grid">
+        <span data-i18n="sp.seed"></span><b id="summary-seed">—</b>
+        <span data-i18n="sp.last"></span><b id="summary-last">—</b>
+        <span data-i18n="sp.blocks"></span><b id="summary-blocks">—</b>
+      </div>
+      <div class="summary-note" data-i18n="sp.note"></div>
+    </aside>
+  </div>
+  <div class="sub-actions">
+    <button class="mc-btn action" id="sp-play" data-i18n="sp.play"></button>
+    <button class="mc-btn action" data-action="create-world" data-i18n="sp.create"></button>
+    <button class="mc-btn action" id="sp-delete" data-i18n="sp.delete"></button>
+    <button class="mc-btn action" data-action="mainmenu" data-i18n="common.cancel"></button>
+  </div>
+</section>
+
+<!-- ============================== CREATE WORLD ============================== -->
+<section id="screen-createworld" class="screen subscreen" data-screen="createworld" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <h1 class="screen-title" data-i18n="create.title"></h1>
+  <div class="sub-body">
+    <div class="panel form-panel">
+      <label class="field">
+        <span data-i18n="create.name"></span>
+        <input id="create-name" class="mc-input" type="text" maxlength="32" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="field">
+        <span data-i18n="create.seed"></span>
+        <input id="create-seed" class="mc-input" type="text" maxlength="48" autocomplete="off" spellcheck="false" data-i18n-placeholder="create.seedPh" placeholder="Deixe em branco para aleatório">
+      </label>
+      <div class="field">
+        <span data-i18n="create.mode"></span>
+        <button id="create-mode" class="mc-btn toggle-btn" data-mode="creative">Criativo</button>
+      </div>
+      <div class="field">
+        <span data-i18n="create.cheats"></span>
+        <button id="create-cheats" class="mc-btn toggle-btn" data-on="true">Ligado</button>
+      </div>
+      <div class="create-preview">
+        <div class="preview-icon" id="create-icon"></div>
+        <div class="preview-text" data-i18n="create.preview"></div>
+      </div>
+    </div>
+  </div>
+  <div class="sub-actions">
+    <button class="mc-btn action primary" id="create-confirm" data-i18n="create.button"></button>
+    <button class="mc-btn action" data-action="singleplayer" data-i18n="common.cancel"></button>
+  </div>
+</section>
+
+<!-- ============================== MULTIPLAYER ============================== -->
+<section id="screen-multiplayer" class="screen subscreen" data-screen="multiplayer" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <h1 class="screen-title" data-i18n="mp.title"></h1>
+  <div class="sub-body">
+    <div class="panel server-panel">
+      <div id="server-list" class="scroll-list server-list" role="listbox" aria-label="Servidores"></div>
+      <div id="server-empty" class="empty-note" data-i18n="mp.empty" hidden></div>
+    </div>
+  </div>
+  <div class="sub-actions">
+    <button class="mc-btn action" id="mp-join" data-i18n="mp.join"></button>
+    <button class="mc-btn action" data-action="add-server" data-i18n="mp.add"></button>
+    <button class="mc-btn action" id="mp-refresh" data-i18n="mp.refresh"></button>
+    <button class="mc-btn action" data-action="mainmenu" data-i18n="common.cancel"></button>
+  </div>
+  <div id="server-modal" class="modal" hidden>
+    <div class="panel modal-panel">
+      <h2 data-i18n="mp.modalTitle"></h2>
+      <label class="field"><span data-i18n="mp.serverName"></span><input id="server-name" class="mc-input" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Meu servidor"></label>
+      <label class="field"><span data-i18n="mp.serverIp"></span><input id="server-ip" class="mc-input" maxlength="64" autocomplete="off" spellcheck="false" placeholder="play.exemplo.com"></label>
+      <div class="modal-actions">
+        <button class="mc-btn" id="server-add-confirm" data-i18n="mp.addConfirm"></button>
+        <button class="mc-btn" data-action="close-modal" data-i18n="common.cancel"></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== REALMS ============================== -->
+<section id="screen-realms" class="screen subscreen" data-screen="realms" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <h1 class="screen-title" data-i18n="realms.title"></h1>
+  <div class="sub-body">
+    <div class="panel realm-panel">
+      <div class="realm-banner">
+        <div class="realm-logo">REALMS</div>
+        <div class="realm-logo-sub">MINECRAFT</div>
+      </div>
+      <div class="realm-card">
+        <div class="realm-icon"></div>
+        <div class="realm-info">
+          <div class="realm-name">Playground Realm</div>
+          <div class="realm-sub" data-i18n="realms.sub"></div>
+          <div class="realm-players"><span class="dot online"></span><span data-i18n="realms.players"></span></div>
+        </div>
+        <div class="realm-status" data-i18n="realms.trial"></div>
+      </div>
+      <p class="realm-note" data-i18n="realms.note"></p>
+    </div>
+  </div>
+  <div class="sub-actions">
+    <button class="mc-btn action primary" data-action="join-realm" data-i18n="realms.join"></button>
+    <button class="mc-btn action" data-action="mainmenu" data-i18n="common.back"></button>
+  </div>
+</section>
+
+<!-- ============================== OPTIONS ============================== -->
+<section id="screen-options" class="screen subscreen" data-screen="options" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <h1 class="screen-title" data-i18n="opt.title"></h1>
+  <div class="sub-body">
+    <div class="panel options-panel">
+      <h2 class="opt-section" data-i18n="opt.graphics"></h2>
+      <div class="opt-row">
+        <span data-i18n="opt.fov"></span>
+        <div class="slider-wrap"><input id="opt-fov" class="mc-slider" type="range" min="50" max="110" step="1"><output id="opt-fov-val" class="slider-val">75</output></div>
+      </div>
+      <div class="opt-row">
+        <span data-i18n="opt.render"></span>
+        <div class="slider-wrap"><input id="opt-render" class="mc-slider" type="range" min="4" max="14" step="1"><output id="opt-render-val" class="slider-val">10</output></div>
+      </div>
+      <div class="opt-row">
+        <span data-i18n="opt.clouds"></span>
+        <button id="opt-clouds" class="mc-btn toggle-btn" data-on="true"></button>
+      </div>
+      <div class="opt-row">
+        <span data-i18n="opt.fullscreen"></span>
+        <button id="opt-fullscreen" class="mc-btn toggle-btn" data-on="false"></button>
+      </div>
+      <h2 class="opt-section" data-i18n="opt.audio"></h2>
+      <div class="opt-row">
+        <span data-i18n="opt.musicVol"></span>
+        <div class="slider-wrap"><input id="opt-music" class="mc-slider" type="range" min="0" max="100" step="1"><output id="opt-music-val" class="slider-val">40</output></div>
+      </div>
+      <div class="opt-row">
+        <span data-i18n="opt.sfx"></span>
+        <div class="slider-wrap"><input id="opt-sfx" class="mc-slider" type="range" min="0" max="100" step="1"><output id="opt-sfx-val" class="slider-val">70</output></div>
+      </div>
+      <h2 class="opt-section" data-i18n="opt.controls"></h2>
+      <div class="opt-row">
+        <span data-i18n="opt.sensitivity"></span>
+        <div class="slider-wrap"><input id="opt-sens" class="mc-slider" type="range" min="30" max="200" step="5"><output id="opt-sens-val" class="slider-val">100</output></div>
+      </div>
+    </div>
+  </div>
+  <div class="sub-actions">
+    <button class="mc-btn action primary" data-action="back-options" id="opt-done" data-i18n="opt.done"></button>
+  </div>
+</section>
+
+<!-- ============================== LANGUAGE ============================== -->
+<section id="screen-language" class="screen subscreen" data-screen="language" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <h1 class="screen-title" data-i18n="lang.title"></h1>
+  <div class="sub-body">
+    <div class="panel list-panel" id="language-list"></div>
+  </div>
+  <div class="sub-actions">
+    <button class="mc-btn action" data-action="back-language" data-i18n="opt.done"></button>
+  </div>
+</section>
+
+<!-- ============================== ACCESSIBILITY ============================== -->
+<section id="screen-accessibility" class="screen subscreen" data-screen="accessibility" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <h1 class="screen-title" data-i18n="access.title"></h1>
+  <div class="sub-body">
+    <div class="panel options-panel">
+      <div class="opt-row"><span data-i18n="access.contrast"></span><button class="mc-btn toggle-btn" data-access="contrast"></button></div>
+      <div class="opt-row"><span data-i18n="access.reduce"></span><button class="mc-btn toggle-btn" data-access="reduce"></button></div>
+      <div class="opt-row"><span data-i18n="access.big"></span><button class="mc-btn toggle-btn" data-access="big"></button></div>
+      <p class="access-note" data-i18n="access.note"></p>
+    </div>
+  </div>
+  <div class="sub-actions">
+    <button class="mc-btn action" data-action="back-accessibility" data-i18n="opt.done"></button>
+  </div>
+</section>
+
+<!-- ============================== QUIT ============================== -->
+<section id="screen-quit" class="screen quit-screen" data-screen="quit" hidden>
+  <div class="quit-inner">
+    <div class="quit-title" data-i18n="quit.title"></div>
+    <div class="quit-sub" data-i18n="quit.sub"></div>
+    <div class="quit-heart" aria-hidden="true"></div>
+    <button class="mc-btn action" data-action="mainmenu" data-i18n="quit.back"></button>
+  </div>
+</section>
+
+<!-- ============================== PAUSE ============================== -->
+<section id="screen-pause" class="screen pause-screen" data-screen="pause" hidden>
+  <div class="pause-inner">
+    <div class="pause-title" data-i18n="pause.title"></div>
+    <div id="pause-world" class="pause-world"></div>
+    <nav class="button-column">
+      <button class="mc-btn action" data-action="resume" data-i18n="pause.resume"></button>
+      <button class="mc-btn action" data-action="pause-options" data-i18n="pause.options"></button>
+      <button class="mc-btn action" data-action="exit-game" data-i18n="pause.quit"></button>
+    </nav>
+  </div>
+</section>
+
+<!-- ============================== LOADING ============================== -->
+<section id="screen-loading" class="screen loading-screen" data-screen="loading" hidden>
+  <div class="dirt-bg" aria-hidden="true"></div>
+  <div class="loading-inner">
+    <div class="loading-label" id="loading-label">Gerando mundo…</div>
+    <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div><div class="loading-sheen"></div></div>
+    <div class="loading-sub" id="loading-sub">Preparando os blocos</div>
+  </div>
+  <div class="loading-tip"><b>Dica:</b> <span id="loading-tip-text">Segure o botão esquerdo para quebrar blocos.</span></div>
+</section>
+
+<!-- ============================== IN-GAME HUD ============================== -->
+<div id="hud" class="hud" hidden>
+  <div class="crosshair" aria-hidden="true"></div>
+  <div id="debug-panel" class="debug-panel" hidden></div>
+  <div id="block-label" class="block-label"></div>
+  <div id="hotbar" class="hotbar" aria-label="Barra de blocos"></div>
+  <div id="touch-controls" class="touch-controls" hidden>
+    <div id="joystick" class="joystick"><div id="joystick-knob" class="joystick-knob"></div></div>
+    <div class="touch-buttons">
+      <button class="touch-btn jump" data-touch="jump" aria-label="Pular">▲</button>
+      <button class="touch-btn place" data-touch="place" aria-label="Colocar bloco">＋</button>
+      <button class="touch-btn break" data-touch="break" aria-label="Quebrar bloco">⛏</button>
+    </div>
+  </div>
+  <button id="touch-pause" class="touch-pause" hidden aria-label="Pausar">II</button>
+  <div id="game-hint" class="game-hint" hidden>
+    <div class="hint-name" id="hint-name"></div>
+    <div class="hint-play" data-i18n="game.clickToPlay"></div>
+    <div class="hint-controls" data-i18n="game.controls"></div>
+  </div>
+  <div class="fps-note" id="fps-note"></div>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="fade" class="fade" aria-hidden="true"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
